@@ -5,6 +5,7 @@ import config from "../../data/game.json" with { type: "json" };
 import quickchat from "../../data/quickchat.json" with { type: "json" };
 import mapData from "../../data/map.json" with { type: "json" };
 import skins from "../../data/skins.json" with { type: "json" };
+import minigames from "../../data/minigames.json" with { type: "json" };
 import { MapGeometry, type MapData } from "../../shared/map.ts";
 import { Meeting } from "./meeting.ts";
 import { assignment, handlers, pool, roleDefs, type PowerWorld } from "./powers.ts";
@@ -221,7 +222,7 @@ export class Room {
     this.startMeeting(id, "", "emergency");
   }
 
-  // Starts working at an assigned, unfinished station in range. Moving cancels (progress is kept per station).
+  // Starts the mini-game at an assigned, unfinished station in range. Moving cancels it.
   task(id: string) {
     const p = this.players.get(id);
     if (this.phase !== "playing" || !p || p.working) return;
@@ -239,14 +240,25 @@ export class Room {
       return;
     }
     p.working.seconds += dt;
-    if (p.working.seconds < config.tasks.duration) return;
-    p.tasks.find((t) => t.station === st.id)!.done = true;
+  }
+
+  // The mini-game itself runs on the client; the server checks place, stillness and minimum time.
+  finishTask(id: string) {
+    const p = this.players.get(id);
+    if (this.phase !== "playing" || !p?.working || p.working.seconds < minigames.minSeconds) return;
+    const station = p.working.station;
+    p.tasks.find((t) => t.station === station)!.done = true;
     p.working = undefined;
     if (!p.alive) p.ghostTasks++;
     if (p.role === "innocent") {
       this.taskDone++;
       this.checkTaskBar();
     }
+  }
+
+  taskCancel(id: string) {
+    const p = this.players.get(id);
+    if (p) p.working = undefined;
   }
 
   private checkTaskBar() {
@@ -621,7 +633,7 @@ export class Room {
       },
       blind: this.blind(p, now) ? this.vision : undefined,
       tasks: p.tasks,
-      working: p.working && { station: p.working.station, progress: Math.min(1, p.working.seconds / config.tasks.duration) },
+      working: p.working && { station: p.working.station, ready: p.working.seconds >= minigames.minSeconds },
       emergencies: p.emergencies,
       offer: p.offer && now < this.choiceUntil ? p.offer : undefined,
       offerLeft: p.offer && now < this.choiceUntil ? Math.ceil((this.choiceUntil - now) / 1000) : undefined,

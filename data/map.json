@@ -5,14 +5,14 @@
   "spawn": { "x": 1000, "y": 700, "rx": 150, "ry": 105 },
   "emergency": { "x": 1000, "y": 700 },
   "stations": [
-    { "id": "antenna", "label": "Fix the antenna", "icon": "📡", "x": 450, "y": 250 },
-    { "id": "rocks", "label": "Collect moon rocks", "icon": "🪨", "x": 150, "y": 400 },
-    { "id": "fish", "label": "Fish through the ice", "icon": "🐟", "x": 1190, "y": 430 },
-    { "id": "igloo", "label": "Defrost the igloo", "icon": "🧊", "x": 1700, "y": 390 },
-    { "id": "servers", "label": "Reboot the servers", "icon": "💾", "x": 330, "y": 990 },
-    { "id": "arcade", "label": "Beat the high score", "icon": "🕹️", "x": 745, "y": 1120 },
-    { "id": "lollipop", "label": "Lick the lollipop", "icon": "🍭", "x": 1300, "y": 1120 },
-    { "id": "cake", "label": "Frost the cake", "icon": "🎂", "x": 1575, "y": 1070 }
+    { "id": "antenna", "game": "tune", "label": "Fix the antenna", "icon": "📡", "x": 450, "y": 250 },
+    { "id": "rocks", "game": "rocks", "label": "Collect moon rocks", "icon": "🪨", "x": 150, "y": 400 },
+    { "id": "fish", "game": "fish", "label": "Fish through the ice", "icon": "🐟", "x": 1190, "y": 430 },
+    { "id": "igloo", "game": "defrost", "label": "Defrost the igloo", "icon": "🧊", "x": 1700, "y": 390 },
+    { "id": "servers", "game": "servers", "label": "Reboot the servers", "icon": "💾", "x": 330, "y": 990 },
+    { "id": "arcade", "game": "whack", "label": "Beat the high score", "icon": "🕹️", "x": 745, "y": 1120 },
+    { "id": "lollipop", "game": "lollipop", "label": "Lick the lollipop", "icon": "🍭", "x": 1300, "y": 1120 },
+    { "id": "cake", "game": "cake", "label": "Frost the cake", "icon": "🎂", "x": 1575, "y": 1070 }
   ],
   "zones": [
     { "id": "lune", "label": "MOON", "labelAt": [380, 300], "x": 0, "y": 0, "w": 1000, "h": 700, "floor": "#e7e3f4", "accent": "#b9b0d9" },

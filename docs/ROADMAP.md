@@ -13,7 +13,7 @@
 - [x] Simple win condition (killer/innocent parity / all killers ejected)
 
 ## Phase 2: quests and ghosts
-- [x] Shared quest bar (hold-still tasks at 8 stations; real mini-games still to do)
+- [x] Shared quest bar, 8 mini-games (one per station, `data/minigames.json`)
 - [ ] Ghosts: ghost chat · [x] ghost quests (count + weight revival)
 
 ## Phase 3: roles

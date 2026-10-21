@@ -1,0 +1,13 @@
+{
+  "minSeconds": 3,
+  "games": {
+    "tune":     { "title": "Tune the signal",   "hint": "Slide until the waves match, then hold", "tolerance": 0.05, "hold": 0.8 },
+    "rocks":    { "title": "Collect moon rocks", "hint": "Tap every floating rock",              "count": 6, "speed": 60 },
+    "fish":     { "title": "Fish through the ice", "hint": "Reel when the fish is over the hook", "catches": 3, "zone": 0.22 },
+    "defrost":  { "title": "Defrost the igloo",  "hint": "Tap fast before it freezes again",      "perTap": 9, "decay": 28 },
+    "servers":  { "title": "Reboot the servers", "hint": "Watch the lights, then repeat",          "length": 4 },
+    "whack":    { "title": "Beat the high score", "hint": "Whack the aliens!",                    "hits": 6, "every": 650, "stay": 900 },
+    "lollipop": { "title": "Lick the lollipop",  "hint": "Swirl around it 3 times",               "turns": 3 },
+    "cake":     { "title": "Frost the cake",     "hint": "Pipe the dots in order",                "dots": 6 }
+  }
+}

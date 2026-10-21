@@ -54,6 +54,7 @@
 
 - Game clock (2026-10-21): 6 min of play time (paused during meetings), cut into 2 min rounds. End of a round = automatic meeting. Clock runs out = killers win. Any meeting restarts the round timer. Settings `time.total` / `time.round` in `data/game.json`.
 - Quests v1 (2026-10-21): 8 stations on the map (2 per zone, `stations` in `data/map.json`), 3 assigned per player. Stand still in range and hold "Task" for 4 s (server-timed, moving cancels). Shared bar visible to everyone; full bar = innocents win. Only innocents' tasks count (killers and neutrals get fake ones as cover). Ghosts keep doing tasks and they count. Real mini-games come later.
+- Mini-games (2026-10-21): each station has its own 5-10 s mini-game (`game` in `data/map.json`, settings in `data/minigames.json`), played in an HTML overlay. The server stays authoritative on what it can check: start in range, don't move (moving cancels), and at least `minSeconds` between start and "done". The skill part itself is client-side (a cheater can skip the game, not the time or the place). You can still be killed while playing. Replaces the 4 s hold.
 - Revival weighting: a ghost with more tasks done is more likely to be picked by the Gambler.
 - Emergency button (2026-10-21): the big red button on the hub table, 1 per player per game, within 130 px of its center.
 - Role choice (2026-10-21): innocents and killers are offered 2 roles, pick 1 within 10 s (default: the first). Neutrals get no choice.
@@ -83,3 +84,4 @@
 - 2026-10-21: map visual pass (drop shadows, zone-tinted walls, portal doors, decor landmarks, ambient motion, space backdrop). No collision change.
 - 2026-10-21: special roles and powers (DJ, Teleporter, Medic, Prankster, Gambler, Sacrifice, Canadian, Jester, Vulture, Blackout, Shapeshifter, Swapper, Prop Master). `test:powers` test.
 - 2026-10-21: game loop: rounds + game clock, quests and shared bar, emergency button, pick 1 of 2 roles, ghost tasks weight revival. `test:loop` test.
+- 2026-10-21: task mini-games (8: tune, rocks, fish, defrost, servers, whack, lollipop, cake).

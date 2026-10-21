@@ -19,7 +19,9 @@ export type ClientMsg =
   | { t: "start" }
   | { t: "kill" }
   | { t: "power" }
-  | { t: "task" } // start working at the station you're standing at
+  | { t: "task" } // start the mini-game at the station you're standing at
+  | { t: "taskDone" } // mini-game finished (accepted after minSeconds, if you haven't moved)
+  | { t: "taskCancel" }
   | { t: "emergency" } // press the big red button
   | { t: "pick"; role: string } // role choice at game start
   | { t: "report" }
@@ -63,7 +65,7 @@ export interface YouView {
   power?: PowerView;
   blind?: number; // vision radius while the lights are out
   tasks?: { station: string; done: boolean }[];
-  working?: { station: string; progress: number }; // 0..1
+  working?: { station: string; ready: boolean }; // playing a mini-game; ready = minSeconds elapsed
   emergencies?: number; // red button presses left
   offer?: string[]; // role ids to pick from, while the choice is open
   offerLeft?: number; // seconds

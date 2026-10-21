@@ -1,8 +1,9 @@
-// Game loop test: role choice, clock, tasks + quest bar, emergency button. Requires the server: npm run dev:server
+// Game loop test: role choice, clock, tasks (mini-game flow) + quest bar, emergency button. Requires the server: npm run dev:server
 // Takes ~20 s. Tasks are random, so it retries in a new room until an innocent has the "fish" station.
 import WebSocket from "ws";
 import mapData from "../../data/map.json" with { type: "json" };
 import config from "../../data/game.json" with { type: "json" };
+import minigames from "../../data/minigames.json" with { type: "json" };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const check = (cond, label) => {
@@ -90,8 +91,11 @@ await walk(worker, 1120, 640);
 await walk(worker, 1120, 470);
 await walk(worker, fish.x, fish.y);
 worker.send({ t: "task" });
-await sleep(1200);
-check(worker.snap.you.working?.progress > 0.1, `working (${Math.round((worker.snap.you.working?.progress ?? 0) * 100)}%)`);
+await sleep(300);
+check(worker.snap.you.working?.station === "fish", "mini-game started at the station");
+worker.send({ t: "taskDone" });
+await sleep(200);
+check(!worker.snap.you.tasks.find((t) => t.station === "fish").done && !worker.snap.you.working.ready, "a win faster than minSeconds is refused");
 worker.send({ t: "input", dx: 1, dy: 0 });
 await sleep(150);
 worker.send({ t: "input", dx: 0, dy: 0 });
@@ -99,8 +103,12 @@ await sleep(100);
 check(!worker.snap.you.working, "moving cancels the task");
 await walk(worker, fish.x, fish.y);
 worker.send({ t: "task" });
-await sleep(config.tasks.duration * 1000 + 400);
-check(worker.snap.you.tasks.find((t) => t.station === "fish").done, "task done after holding still");
+await sleep(minigames.minSeconds * 1000 + 400);
+check(worker.snap.you.working?.ready, "ready after minSeconds");
+check(!worker.snap.you.tasks.find((t) => t.station === "fish").done, "not done until the mini-game is won");
+worker.send({ t: "taskDone" });
+await sleep(200);
+check(worker.snap.you.tasks.find((t) => t.station === "fish").done && !worker.snap.you.working, "task done after the mini-game");
 const innocents = bots.filter((b) => b.snap.you.role === "innocent").length;
 const expected = 1 / (innocents * config.tasks.perPlayer);
 check(Math.abs(bots[0].snap.taskBar - expected) < 0.001, `quest bar moved for everyone (${bots[0].snap.taskBar.toFixed(3)})`);

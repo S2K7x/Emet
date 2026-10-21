@@ -35,6 +35,7 @@ Innocents do quests in a chaotic multiverse while killers take them out live. Ev
 - 5 to 10 s mini-games, tied to the zone you're in.
 - No repetitive chore tasks (Among Us's problem).
 - Every quest fills the shared bar.
+- v1 (one per station): 📡 tune the signal (slider), 🪨 tap drifting moon rocks, 🐟 timed fishing, 🧊 mash to defrost, 💾 Simon on the servers, 🕹️ whack-the-aliens, 🍭 swirl around the lollipop, 🎂 connect the frosting dots.
 
 ## Death, ghosts and revival
 - A dead player becomes a ghost: ghost-only chat, ghost quests that count toward the bar.

@@ -58,7 +58,6 @@
   },
   "tasks": {
     "perPlayer": 3,
-    "duration": 4,
     "range": 70
   },
   "emergency": {

@@ -51,6 +51,7 @@ export interface Station {
   id: string;
   label: string;
   icon: string;
+  game: string; // mini-game type (data/minigames.json)
   x: number;
   y: number;
 }

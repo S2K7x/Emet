@@ -8,6 +8,7 @@ import mapData from "../../data/map.json";
 import { MapGeometry, type MapData } from "../../shared/map.ts";
 import { drawMap } from "./MapView.ts";
 import { Minimap } from "./Minimap.ts";
+import { MiniGame } from "./MiniGames.ts";
 import config from "../../data/game.json";
 import powers from "../../data/powers.json";
 
@@ -51,6 +52,11 @@ export class GameScene extends Phaser.Scene {
   private items = new Map<string, Phaser.GameObjects.Text>();
   private stationMarks = new Map<string, Phaser.GameObjects.Text>(); // "!" over my unfinished stations
   private pickedKey = "";
+  private miniGame = new MiniGame(
+    () => this.syncMiniGame(), // won: tell the server as soon as it can accept
+    () => this.net.send({ t: "taskCancel" }),
+  );
+  private doneSent = false;
   private bannerTimer?: ReturnType<typeof setTimeout>;
   private pendingTextures = new Map<string, (() => void)[]>();
   private keys!: Record<"up" | "down" | "left" | "right" | "w" | "a" | "s" | "d", Phaser.Input.Keyboard.Key>;
@@ -79,6 +85,11 @@ export class GameScene extends Phaser.Scene {
     $("power").onclick = () => this.net.send({ t: "power" });
     $("use").onclick = () => this.use();
     this.input.keyboard!.on("keydown-F", () => this.use());
+    this.input.keyboard!.on("keydown-ESC", () => {
+      if (!this.miniGame.open) return;
+      this.miniGame.close();
+      this.net.send({ t: "taskCancel" });
+    });
     this.drawStations();
 
     $("start").onclick = () => this.net.send({ t: "start" });
@@ -108,6 +119,7 @@ export class GameScene extends Phaser.Scene {
     if (msg.phase !== this.lastPhase) this.lastSent = { dx: NaN, dy: NaN };
     this.lastPhase = msg.phase;
     this.updateUi(msg);
+    this.syncMiniGame();
   }
 
   update() {
@@ -138,6 +150,7 @@ export class GameScene extends Phaser.Scene {
 
     // Only send when the intent changes.
     if (this.latest?.phase === "meeting") return;
+    if (this.miniGame.open) dx = dy = 0; // busy with a task: stay put (moving would cancel it)
     if (Number.isNaN(this.lastSent.dx) || Math.abs(dx - this.lastSent.dx) > 0.05 || Math.abs(dy - this.lastSent.dy) > 0.05) {
       this.lastSent = { dx, dy };
       this.net.send({ t: "input", dx, dy });
@@ -264,6 +277,25 @@ export class GameScene extends Phaser.Scene {
     const e = map.data.emergency;
     if (s.you.alive && (s.you.emergencies ?? 0) > 0 && Math.hypot(me.x - e.x, me.y - e.y) <= config.emergency.range) return "emergency";
     return undefined;
+  }
+
+  // The server says what I'm working on: open/close the mini-game to match, and report a win once allowed.
+  private syncMiniGame() {
+    const w = this.latest?.you.working;
+    if (!w) {
+      if (this.miniGame.open) this.miniGame.close();
+      this.doneSent = false;
+      return;
+    }
+    if (this.miniGame.station !== w.station) {
+      const st = map.data.stations.find((s) => s.id === w.station);
+      if (st) this.miniGame.start(st.id, st.game, st.icon);
+      this.doneSent = false;
+    }
+    if (this.miniGame.waitingForServer && w.ready && !this.doneSent) {
+      this.doneSent = true;
+      this.net.send({ t: "taskDone" });
+    }
   }
 
   private use() {
@@ -439,7 +471,7 @@ export class GameScene extends Phaser.Scene {
     if (target === "task") {
       const w = s.you.working;
       use.disabled = !!w;
-      use.textContent = w ? `Working… ${Math.round(w.progress * 100)}%` : "🔧 Task";
+      use.textContent = w ? "🎮 Playing…" : "🔧 Task";
     } else if (target === "emergency") {
       use.disabled = false;
       use.textContent = `🚨 Emergency (${s.you.emergencies})`;

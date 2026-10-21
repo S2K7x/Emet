@@ -108,6 +108,10 @@ wss.on("connection", (socket) => {
       room.power(id);
     } else if (msg.t === "task" && room) {
       room.task(id);
+    } else if (msg.t === "taskDone" && room) {
+      room.finishTask(id);
+    } else if (msg.t === "taskCancel" && room) {
+      room.taskCancel(id);
     } else if (msg.t === "emergency" && room) {
       room.emergency(id);
     } else if (msg.t === "pick" && room) {
