@@ -40,6 +40,7 @@
 - Playtests: server on Shai's Mac + temporary Cloudflare tunnel. Permanent hosting later.
 - Hosting: **client on Vercel** (static, CDN, invite link = Vercel URL), **game server on Render** (one long-lived Node process, `render.yaml`; Dockerfile for Railway/Fly). Not the server on Vercel: Vercel WebSockets can land on different instances and are cut at the function max duration, which breaks in-memory rooms and the 20 Hz tick.
 - Server only accepts WebSockets from `ALLOWED_ORIGINS` (unset = any, for dev). Ping every 25 s, dead sockets dropped (triggers the reconnection grace).
+- Client watchdog: in a room, 5 s without a message = dead connection, reconnect (Render's proxy doesn't forward the server's close, so a tab would otherwise freeze after a redeploy).
 - Phaser is loaded lazily: the lobby shows without waiting for the game engine.
 
 - Visual direction (ref. "gnome cards" video): full-page bright color fills, bold geometric font (Outfit), chibi helmet characters that spill out of the frame, rounded white pills, big numbers, curved black "Let's go ›››" bar at the bottom. Role colors and text in `data/roles.json`.

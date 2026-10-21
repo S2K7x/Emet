@@ -3,17 +3,21 @@
 import WebSocket from "ws";
 
 const URL = process.env.SERVER_URL ?? "ws://localhost:2567";
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Remote server (Render): a proxy sits in between, closes take longer to propagate. WAIT=10 multiplies the waits.
+const WAIT = Number(process.env.WAIT ?? 1);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms * WAIT));
 const check = (cond, label) => {
   console.log(`${cond ? "OK  " : "FAIL"} ${label}`);
   if (!cond) process.exitCode = 1;
 };
-setTimeout(() => (console.log("FAIL timeout"), process.exit(1)), 30_000);
+setTimeout(() => (console.log("FAIL timeout"), process.exit(1)), 30_000 * WAIT);
 
 function connect(b) {
   const ws = new WebSocket(URL);
   b.ws = ws;
   ws.on("message", (raw) => {
+    if (b.ws !== ws) return;
+    b.received = (b.received ?? 0) + 1;
     const m = JSON.parse(raw);
     if (m.t === "joined") Object.assign(b, { id: m.you, code: m.code, token: m.token, joinedCount: (b.joinedCount ?? 0) + 1 });
     if (m.t === "snapshot") b.snap = m;
@@ -56,6 +60,9 @@ const thief = {};
 await connect(thief);
 send(thief, { t: "rejoin", code, token });
 await sleep(300);
-check(c.ws.readyState !== WebSocket.OPEN && thief.id === id, "only one active socket per player");
+// Behind a proxy (Render) the server's close may never reach the old socket: check it stops receiving instead.
+const before = c.received;
+await sleep(300);
+check(thief.id === id && c.received === before, "only one active socket per player");
 check(!bots[1].snap.players.find((p) => p.id === id).away, "closing the old socket doesn't mark the player \"offline\"");
 process.exit();

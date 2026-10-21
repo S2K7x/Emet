@@ -11,6 +11,9 @@ const RETRY_MAX_MS = 5000;
 // How long a lobby action (create, join) waits for the server before giving up.
 // Long enough for a sleeping free-tier server to wake up.
 const SEND_TIMEOUT_MS = 60000;
+// In a room the server sends ~20 snapshots/s. Silence this long = dead connection, even if the socket says "open"
+// (a hosting proxy like Render's may never forward the server's close).
+const STALE_MS = 5000;
 
 export interface Session {
   code: string;
@@ -23,6 +26,9 @@ export class Net {
   private markOpen!: () => void;
   private attempts = 0;
   private wasConnected = false;
+  private inRoom = false;
+  private lastMessageAt = 0;
+  private drop = () => {}; // abandons the current socket and reconnects
   onMessage: (msg: ServerMsg) => void = () => {};
   onStatus: (connected: boolean) => void = () => {};
   onExpired: () => void = () => {};
@@ -30,6 +36,9 @@ export class Net {
   constructor() {
     this.resetOpened();
     this.connect();
+    setInterval(() => {
+      if (this.inRoom && this.socket.readyState === WebSocket.OPEN && Date.now() - this.lastMessageAt > STALE_MS) this.drop();
+    }, 1000);
   }
 
   private resetOpened() {
@@ -60,8 +69,21 @@ export class Net {
     const socket = new WebSocket(SERVER_URL);
     this.socket = socket;
     let didOpen = false;
+    let lost = false;
+
+    // Connection lost (locked screen, mobile network, server restart): retry forever, backing off.
+    // In game, reconnection resends the token (see "open").
+    const onLost = () => {
+      if (lost) return;
+      lost = true;
+      if (didOpen) this.resetOpened();
+      this.onStatus(false);
+      const delay = Math.min(1000 * 2 ** this.attempts++, RETRY_MAX_MS);
+      setTimeout(() => this.connect(), delay);
+    };
 
     socket.addEventListener("open", () => {
+      this.lastMessageAt = Date.now();
       didOpen = true;
       this.attempts = 0;
       const session = Net.savedSession();
@@ -72,23 +94,24 @@ export class Net {
     });
 
     socket.addEventListener("message", (e) => {
+      if (lost) return; // dropped by the watchdog: a newer socket takes over
+      this.lastMessageAt = Date.now();
       const msg: ServerMsg = JSON.parse(e.data);
-      if (msg.t === "joined") sessionStorage.setItem(SESSION_KEY, JSON.stringify({ code: msg.code, token: msg.token }));
+      if (msg.t === "joined") {
+        this.inRoom = true;
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ code: msg.code, token: msg.token }));
+      }
       if (msg.t === "error" && msg.message === "Session expired") {
         sessionStorage.removeItem(SESSION_KEY);
+        this.inRoom = false;
         this.onExpired();
       }
       this.onMessage(msg);
     });
 
-    // Server unreachable or connection lost (locked screen, mobile network): retry forever, backing off.
-    // In game, reconnection resends the token (see "open").
-    socket.addEventListener("close", () => {
-      if (didOpen) this.resetOpened();
-      this.onStatus(false);
-      const delay = Math.min(1000 * 2 ** this.attempts++, RETRY_MAX_MS);
-      setTimeout(() => this.connect(), delay);
-    });
+    socket.addEventListener("close", onLost);
+    // Behind a proxy, "close" may never fire: don't wait for it.
+    this.drop = () => (socket.close(), onLost());
   }
 
   // Page reload: resume this tab's session.
