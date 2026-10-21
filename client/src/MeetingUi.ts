@@ -49,7 +49,11 @@ export class MeetingUi {
     box.style.display = "flex";
 
     const stageLabel = { discussion: "Discussion", vote: "Vote", result: "Result" }[m.stage];
-    $("mt-title").textContent = `${this.nameOf(m.reporter)} reported ${this.nameOf(m.body)}'s body`;
+    $("mt-title").textContent =
+      m.kind === "round" ? "⏰ Round over: who's lying?"
+      : !m.body ? `${this.nameOf(m.reporter)} called an emergency meeting 🚨`
+      : m.reporter === m.body ? `${this.nameOf(m.body)}'s body reported itself 🍁`
+      : `${this.nameOf(m.reporter)} reported ${this.nameOf(m.body)}'s body`;
     $("mt-timer").textContent = `${stageLabel} · ${m.secondsLeft}s`;
 
     // Only rebuild the cards when something changed (otherwise clicks get lost).

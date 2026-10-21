@@ -44,7 +44,9 @@ bots[0].send({ t: "start" });
 await sleep(300);
 
 const k = bots.find((b) => b.snap.you.role === "killer");
-const [victim, reporter, other] = bots.filter((b) => b !== k);
+// The Canadian's body reports itself: keep them out of the victim slot (at most one per game).
+const canadianLast = (b) => (b.snap.you.power?.id === "canadian" ? 1 : 0);
+const [victim, reporter, other] = bots.filter((b) => b !== k).sort((a, b) => canadianLast(a) - canadianLast(b));
 
 console.log(`... waiting for initial cooldown ${k.snap.you.killCooldown}s`);
 await sleep(k.snap.you.killCooldown * 1000 + 300);

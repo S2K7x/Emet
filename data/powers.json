@@ -1,0 +1,100 @@
+{
+  "assignment": {
+    "neutralChance": 0.5,
+    "neutralMinPlayers": 5,
+    "reviveCap": 2
+  },
+  "roles": [
+    {
+      "id": "dj", "team": "innocent", "name": "DJ", "icon": "🎧",
+      "power": "Drop the beat: everyone else dances on the spot for a few seconds",
+      "weakness": "Very visible, gives away your position",
+      "button": "Drop", "uses": -1, "cooldown": 40, "enabled": true,
+      "params": { "duration": 4 }
+    },
+    {
+      "id": "teleporter", "team": "innocent", "name": "Teleporter", "icon": "🌀",
+      "power": "Swaps the positions of 2 random players (maybe you)",
+      "weakness": "You don't choose who: it can help a killer",
+      "button": "Warp", "uses": -1, "cooldown": 45, "enabled": true,
+      "params": {}
+    },
+    {
+      "id": "medic", "team": "innocent", "name": "Medic", "icon": "🩹",
+      "power": "Puts a bubble on the closest player: it blocks one kill",
+      "weakness": "Everyone sees the bubble, it doesn't last",
+      "button": "Bubble", "uses": -1, "cooldown": 40, "enabled": true,
+      "params": { "range": 140, "duration": 20 }
+    },
+    {
+      "id": "prankster", "team": "innocent", "name": "Prankster", "icon": "🍌",
+      "power": "Drops a banana peel. Whoever steps on it slips across the room",
+      "weakness": "Killers slip too… or use it to escape",
+      "button": "Banana", "uses": -1, "cooldown": 15, "enabled": true,
+      "params": { "maxActive": 3, "armDelay": 1, "slipDuration": 1.2, "slipSpeed": 1.8 }
+    },
+    {
+      "id": "gambler", "team": "innocent", "name": "Gambler", "icon": "🎰",
+      "power": "Spins the wheel once: a random player dies, then a random dead player comes back",
+      "weakness": "Totally random, everyone sees the wheel",
+      "button": "Spin", "uses": 1, "cooldown": 0, "initialCooldown": 20, "enabled": true,
+      "params": { "spinDelay": 3 }
+    },
+    {
+      "id": "sacrifice", "team": "innocent", "name": "Sacrifice", "icon": "🕯️",
+      "power": "Next to a body: you die and they come back to life",
+      "weakness": "You're gone for good, only once",
+      "button": "Sacrifice", "uses": 1, "cooldown": 0, "enabled": true,
+      "params": { "range": 90 }
+    },
+    {
+      "id": "canadian", "team": "innocent", "name": "Canadian", "icon": "🍁",
+      "power": "Passive: if you get killed, your body reports itself. Sorry!",
+      "weakness": "You have to die first, eh",
+      "button": "", "uses": 0, "cooldown": 0, "enabled": true,
+      "params": { "delay": 2.5 }
+    },
+    {
+      "id": "jester", "team": "neutral", "name": "Jester", "icon": "🤡",
+      "power": "You win alone if you get voted out. Prank call: one emergency meeting from anywhere",
+      "weakness": "Killers can still get you",
+      "button": "Prank call", "uses": 1, "cooldown": 0, "initialCooldown": 15, "enabled": true,
+      "params": {}
+    },
+    {
+      "id": "vulture", "team": "neutral", "name": "Vulture", "icon": "🦅",
+      "power": "Eat bodies before anyone reports them. Eat enough and you win alone",
+      "weakness": "Eating destroys evidence: everyone hates you",
+      "button": "Eat", "uses": -1, "cooldown": 15, "enabled": true,
+      "params": { "range": 90, "goal": 3 }
+    },
+    {
+      "id": "lightsout", "team": "killer", "name": "Blackout", "icon": "🌑",
+      "power": "Cuts the lights: everyone but killers barely sees anything",
+      "weakness": "Everyone knows a killer did it",
+      "button": "Lights out", "uses": -1, "cooldown": 50, "initialCooldown": 15, "enabled": true,
+      "params": { "duration": 8, "vision": 170 }
+    },
+    {
+      "id": "disguise", "team": "killer", "name": "Shapeshifter", "icon": "🎭",
+      "power": "Takes the look and name of a random player for a while",
+      "weakness": "Two of the same person is a bit suspicious",
+      "button": "Disguise", "uses": -1, "cooldown": 40, "enabled": true,
+      "params": { "duration": 15 }
+    },
+    {
+      "id": "swap", "team": "killer", "name": "Swapper", "icon": "🔄",
+      "power": "Swaps your position with a random innocent",
+      "weakness": "Random target, there's a puff of smoke at both spots",
+      "button": "Swap", "uses": -1, "cooldown": 45, "enabled": true,
+      "params": {}
+    },
+    {
+      "id": "decoy", "team": "killer", "name": "Prop Master", "icon": "🎈",
+      "power": "Drops a fake body that looks like a random living player",
+      "weakness": "The 'victim' is alive at the meeting",
+      "button": "Fake body", "uses": 2, "cooldown": 45, "enabled": true,
+      "params": {}
+    }
+  ]
+}

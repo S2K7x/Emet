@@ -13,9 +13,9 @@ Real-time multiplayer social deduction game (Among Us / Werewolf style), funny a
 ## Stack and layout
 - `client/`: Phaser 3 + TypeScript + Vite. Phaser is loaded lazily (dynamic import) so the lobby shows first.
 - `server/`: Node + `ws`, run with `tsx`. One `Room` per game, in memory, 20 Hz tick, snapshot built per player.
-- `shared/`: protocol and map geometry used by both. `data/`: game settings, roles, map, quick chat (JSON).
+- `shared/`: protocol and map geometry used by both. `data/`: game settings, roles, special roles/powers (`powers.json`), map, quick chat (JSON).
 - Commands: `npm run dev` (client 5173 + server 2567), `npm run typecheck`, `npm run build`.
-- Server tests (server must be running): `npm run test:kill | test:meeting | test:reconnect | test:map`. Against a remote server: `SERVER_URL=wss://… WAIT=10 npm run test:reconnect`.
+- Server tests (server must be running): `npm run test:kill | test:meeting | test:reconnect | test:map | test:powers | test:loop`. Against a remote server: `SERVER_URL=wss://… WAIT=10 npm run test:reconnect`.
 - Bots: `node server/scripts/bots.mjs CODE 4`.
 
 ## Deployment

@@ -43,6 +43,16 @@ export interface MapData {
   doors?: number[][]; // [x, y, w, h] openings between zones, drawn as portal gates
   decor?: Decor[];
   props: Prop[];
+  emergency: { x: number; y: number }; // the big red button
+  stations: Station[]; // quest spots
+}
+
+export interface Station {
+  id: string;
+  label: string;
+  icon: string;
+  x: number;
+  y: number;
 }
 
 interface Rect { x: number; y: number; w: number; h: number }

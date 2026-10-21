@@ -2,7 +2,7 @@
 
 ## Assignment
 - **Killers** are drawn at random.
-- Each **innocent** is offered 2 random roles and secretly keeps 1 (choice within a short time limit).
+- Each **innocent** is offered 2 random roles and secretly keeps 1 (choice within a short time limit). *Prototype: 1 random role, no choice yet.*
 - Total pool of about 16 roles, **6 to 8 in play per game**. Players don't know which ones.
 - No role without a power. Each power has 1-2 uses or a long cooldown.
 - Effects are visible to everyone; the user stays hidden unless they're in line of sight.
@@ -24,29 +24,47 @@
 }
 ```
 
-## Innocent roles (v0)
+## Implemented roles (data/powers.json)
+Each player gets one special role on top of their team. Numbers (cooldown, uses, durations, ranges) are in `data/powers.json`; behavior is one handler per id in `server/src/powers.ts`. Set `"enabled": false` to take a role out of the pool.
+
+### Innocent
 | Role | Power | Weakness / limit |
 |---|---|---|
-| Teleporter | Teleports 2 random players every X seconds | Random targets, can help a killer |
-| Flyer | Flies through the air for a few seconds | Visible to everyone, limited duration |
-| Cop | Ties 2 players together until the next meeting | Usable during rounds 1 and 2, blind decision |
-| Gambler | One wheel per game: randomly kills 1 player then revives 1 player | Random, everyone sees the wheel spin, not the result |
-| DJ | Makes everyone dance for a few seconds, except themselves | Very visible, gives away their position |
-| Sacrifice | Sacrifices themselves to revive a **killed** player | Dies permanently, only once |
+| 🎧 DJ | Everyone else dances on the spot (can't move) for 4 s | Banner for everyone + headphones over the DJ |
+| 🌀 Teleporter | Swaps 2 random players (maybe yourself) | Random, can help a killer |
+| 🩹 Medic | Bubble on the closest player: blocks one kill (wasted kill + cooldown) | Bubble visible to all, 20 s |
+| 🍌 Prankster | Drops a banana (max 3). Anyone stepping on it slides out of control | Killers can use it to flee |
+| 🎰 Gambler | Once: wheel spins, a random player dies, then a random killed player revives | Totally random, banner for everyone |
+| 🕯️ Sacrifice | Next to a body: you die, they revive. On a fake body you die for nothing | Once, permanent |
+| 🍁 Canadian | Passive: your body reports itself 2.5 s after you die | You have to die first |
 
-## Roles to design (ideas to fill the pool)
-- Detective: sees the latest movements around a body.
-- Medic: protects a player from a kill for X seconds.
-- Ghost Radio: briefly talks to ghosts while still alive.
-- Mime: copies the power of the last player in range.
-- Ball and Chain: slows nearby players but is immune to one ejection.
-- Neutral role (jester): wins if ejected by vote.
+### Neutral (max 1 per game, `neutralChance`, from `neutralMinPlayers`)
+| Role | Win | Power |
+|---|---|---|
+| 🤡 Jester | Wins alone if voted out | Prank call: one emergency meeting from anywhere |
+| 🦅 Vulture | Wins alone after eating 3 bodies | Eats a body in range (destroys evidence) |
 
-## Killers
-- 1 killer for 5-6 players, 2 for 7-10 (configurable).
-- Killers know each other (configurable).
-- Short-range kill, 25 s cooldown.
-- Each gets **1 random chaotic power**: disguise, fake body, lights out, position swap, etc.
+### Killer powers (each killer gets one)
+| Role | Power |
+|---|---|
+| 🌑 Blackout | Lights out 8 s: innocents/neutrals only see 170 px around them (filtered server-side) |
+| 🎭 Shapeshifter | Takes the look and name of a random player for 15 s (killer teammates see through it) |
+| 🔄 Swapper | Swaps position with a random innocent |
+| 🎈 Prop Master | Drops a fake body of a random living player (2 uses). Reporting it calls a real meeting |
+
+### Rules
+- Revivals (Gambler, Sacrifice): only killed players with a body, never ejected ones, global cap `reviveCap` = 2.
+- Meetings cancel dances, slips, disguises and lights out. Bodies and bananas are cleared after a meeting.
+- A Jester ejection ends the game immediately; a Vulture reaching its goal too.
+- Neutrals count as non-killers for parity. Innocents win when all killers are gone, even if a neutral is alive.
+- Everyone's special role is revealed on the end screen.
+- Ideas from Goose Goose Duck (Canadian, Vulture, Dodo/Jester) and Among Us mods (Medic, Swapper, Morphling, Jester).
+
+## Not built yet (ideas)
+- Flyer, Cop (tether), Detective, Ghost Radio, Mime, Ball and Chain (from the original list).
+- Party Duck: gives players a squeaky voice in meetings (needs voice chat).
+- Mortician: sees how long a body has been dead.
+- Politician: wins vote ties.
 
 ## Interaction rules to decide / test
 - Can a player tied by the Cop be killed? Proposal: yes, and the closest tied player becomes a witness to the body.

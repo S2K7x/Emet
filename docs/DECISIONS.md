@@ -48,6 +48,16 @@
 - Skins (`data/skins.json`): 6 characters (Helmet, Astro, Parka, Glitch, Gummy, Gnome), chosen in the lobby, **cosmetic only** and open to everyone. The server-assigned color is drawn on every skin and stays the main way to recognize a player; two players can share a skin. **Every character carries a sword**, whatever their role, so it gives nothing away (an optional sword would have read as "killer").
 - Minimap (top right, tap = enlarged, M key on PC): shows the map, your own position and the camera view. Other players are **not** shown by default (otherwise you'd know who is alone with whom): setting `minimap.showPlayers` in `data/game.json`.
 
+- Special roles (2026-10-21): 7 innocent, 2 neutral, 4 killer powers in `data/powers.json` (see `docs/ROLES.md`). Dealt at random for now (no "pick 1 of 2" screen yet), no duplicates while the pool lasts. One power button (E key), server checks cooldown/uses/range.
+- Neutral roles (Jester, Vulture) win alone; at most one per game, 50% chance from 5 players.
+- Power effects are visible to everyone (banner or emoji on the map), the user isn't named.
+
+- Game clock (2026-10-21): 6 min of play time (paused during meetings), cut into 2 min rounds. End of a round = automatic meeting. Clock runs out = killers win. Any meeting restarts the round timer. Settings `time.total` / `time.round` in `data/game.json`.
+- Quests v1 (2026-10-21): 8 stations on the map (2 per zone, `stations` in `data/map.json`), 3 assigned per player. Stand still in range and hold "Task" for 4 s (server-timed, moving cancels). Shared bar visible to everyone; full bar = innocents win. Only innocents' tasks count (killers and neutrals get fake ones as cover). Ghosts keep doing tasks and they count. Real mini-games come later.
+- Revival weighting: a ghost with more tasks done is more likely to be picked by the Gambler.
+- Emergency button (2026-10-21): the big red button on the hub table, 1 per player per game, within 130 px of its center.
+- Role choice (2026-10-21): innocents and killers are offered 2 roles, pick 1 within 10 s (default: the first). Neutrals get no choice.
+
 ## Open questions
 1. ~~Engine~~ → web (2026-10-19).
 2. Can a player tied by the Cop be killed? (proposal: yes, and the tied player becomes a witness)
@@ -71,3 +81,5 @@
 - 2026-10-21: deployment split: client on Vercel, server on Render (origin allowlist, heartbeat, health check, lazy Phaser).
 - 2026-10-21: skins (6 characters), chosen in the lobby, cosmetic only. Everyone carries a sword.
 - 2026-10-21: map visual pass (drop shadows, zone-tinted walls, portal doors, decor landmarks, ambient motion, space backdrop). No collision change.
+- 2026-10-21: special roles and powers (DJ, Teleporter, Medic, Prankster, Gambler, Sacrifice, Canadian, Jester, Vulture, Blackout, Shapeshifter, Swapper, Prop Master). `test:powers` test.
+- 2026-10-21: game loop: rounds + game clock, quests and shared bar, emergency button, pick 1 of 2 roles, ghost tasks weight revival. `test:loop` test.

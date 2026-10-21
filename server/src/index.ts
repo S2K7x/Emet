@@ -104,6 +104,14 @@ wss.on("connection", (socket) => {
       room.setInput(id, msg.dx, msg.dy);
     } else if (msg.t === "start" && room) {
       room.start(id);
+    } else if (msg.t === "power" && room) {
+      room.power(id);
+    } else if (msg.t === "task" && room) {
+      room.task(id);
+    } else if (msg.t === "emergency" && room) {
+      room.emergency(id);
+    } else if (msg.t === "pick" && room) {
+      room.pick(id, String(msg.role));
     } else if (msg.t === "kill" && room) {
       room.kill(id);
     } else if (msg.t === "report" && room) {

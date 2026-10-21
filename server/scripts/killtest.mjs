@@ -53,7 +53,9 @@ const innocentSnap = JSON.stringify(bots.find((b) => b.snap.you.role === "innoce
 check(!innocentSnap.includes("killer"), "\"killer\" absent from an innocent's snapshot");
 
 const k = killers[0];
-const innocents = bots.filter((b) => b !== k);
+// The Canadian's body reports itself (meeting): never kill them here (at most one per game).
+const canadianLast = (b) => (b.snap.you.power?.id === "canadian" ? 1 : 0);
+const innocents = bots.filter((b) => b !== k).sort((a, b) => canadianLast(a) - canadianLast(b));
 
 async function goTo(victim) {
   for (let i = 0; i < 100; i++) {

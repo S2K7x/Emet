@@ -1,4 +1,4 @@
-import { SKIP, type MeetingStage, type MeetingView, type Role } from "../../shared/protocol.ts";
+import { SKIP, type MeetingKind, type MeetingStage, type MeetingView, type Role } from "../../shared/protocol.ts";
 import config from "../../data/game.json" with { type: "json" };
 
 export interface MeetingResult {
@@ -12,7 +12,7 @@ export class Meeting {
   result?: MeetingResult;
   private votes = new Map<string, string>();
 
-  constructor(readonly reporter: string, readonly body: string, now: number) {
+  constructor(readonly reporter: string, readonly body: string, now: number, readonly kind: MeetingKind = "report") {
     this.endsAt = now + config.meeting.discussion * 1000;
   }
 
@@ -60,6 +60,7 @@ export class Meeting {
   viewFor(viewer: string, now: number, roleOf: (id: string) => Role | undefined): MeetingView {
     const ejected = this.result?.ejected;
     return {
+      kind: this.kind,
       stage: this.stage,
       secondsLeft: Math.max(0, Math.ceil((this.endsAt - now) / 1000)),
       reporter: this.reporter,

@@ -16,6 +16,8 @@
     "build": "npm run build -w client",
     "start": "npm run start -w server",
     "test:reconnect": "npm run test:reconnect -w server",
-    "test:map": "npm run test:map -w server"
+    "test:map": "npm run test:map -w server",
+    "test:powers": "npm run test:powers -w server",
+    "test:loop": "npm run test:loop -w server"
   }
 }

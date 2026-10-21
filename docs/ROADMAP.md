@@ -13,14 +13,14 @@
 - [x] Simple win condition (killer/innocent parity / all killers ejected)
 
 ## Phase 2: quests and ghosts
-- [ ] Shared quest bar, 3 mini-games
-- [ ] Ghosts: ghost chat, ghost quests
+- [x] Shared quest bar (hold-still tasks at 8 stations; real mini-games still to do)
+- [ ] Ghosts: ghost chat · [x] ghost quests (count + weight revival)
 
 ## Phase 3: roles
-- [ ] Data-driven role system
-- [ ] 3 roles: Cop, Teleporter, Sacrifice
-- [ ] Chaotic killer power (2 powers)
-- [ ] Assignment: 2 roles offered, 1 kept
+- [x] Data-driven role system
+- [x] Roles: 7 innocent, 2 neutral (Cop not yet)
+- [x] Chaotic killer power (4 powers)
+- [x] Assignment: 2 roles offered, 1 kept
 
 ## Phase 4: multiverse
 - [ ] 4 zones with different rules

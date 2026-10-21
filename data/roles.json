@@ -11,6 +11,12 @@
     "color": "#e03c31",
     "icon": "🗡️"
   },
+  "neutral": {
+    "name": "Wildcard",
+    "tagline": "Nobody's side but your own",
+    "color": "#ff8a1f",
+    "icon": "🃏"
+  },
   "ghost": {
     "name": "Ghost",
     "tagline": "You're dead… but you can still help",

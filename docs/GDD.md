@@ -22,7 +22,7 @@ Innocents do quests in a chaotic multiverse while killers take them out live. Ev
 ## Game loop
 1. **Start**: roles are assigned (see `ROLES.md`), 10 s intro.
 2. **Round (2 min, real time)**: innocents do quests, killers kill and sabotage. Everyone moves freely around the map.
-3. **Meeting**: triggered by a reported body (immediately) or at the end of the round. Discussion, then anonymous vote.
+3. **Meeting**: triggered by a reported body (immediately), the emergency button (1 per player) or at the end of the round. Discussion, then anonymous vote.
 4. **Vote**: the most-voted player is ejected and only reveals "innocent" or "killer". Tie = no one ejected. An innocent wrongly ejected is the innocents' loss.
 5. Back to the next round, until a win condition is met.
 

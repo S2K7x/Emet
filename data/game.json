@@ -51,5 +51,22 @@
   "chat": {
     "minInterval": 1
   },
-  "reconnectGrace": 30
+  "reconnectGrace": 30,
+  "time": {
+    "total": 360,
+    "round": 120
+  },
+  "tasks": {
+    "perPlayer": 3,
+    "duration": 4,
+    "range": 70
+  },
+  "emergency": {
+    "perPlayer": 1,
+    "range": 130
+  },
+  "roles": {
+    "choices": 2,
+    "choiceTime": 10
+  }
 }
