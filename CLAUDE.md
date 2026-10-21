@@ -19,13 +19,13 @@ Real-time multiplayer social deduction game (Among Us / Werewolf style), funny a
 - Bots: `node server/scripts/bots.mjs CODE 4`.
 
 ## Deployment
-- **Client on Vercel**: project `emet` (team `s2k7xs-projects`), **Root Directory = `client`**, config in `client/vercel.json`. Env `VITE_SERVER_URL=wss://emet-server.onrender.com` (baked in at build time). URL: https://emet-s2k7xs-projects.vercel.app
+- **Client on Vercel**: project `emet` (team `s2k7xs-projects`), **Root Directory = `client`**, config in `client/vercel.json`. Env `VITE_SERVER_URL=wss://emet-server.onrender.com` (baked in at build time). Public URL (share this one): https://emet-iota.vercel.app. The `*-s2k7xs-projects.vercel.app` URLs are behind Vercel Authentication (`ssoProtection: all_except_custom_domains`) and redirect players to a Vercel login.
 - **Server on Render**: service `emet-server` (free plan, Frankfurt), `render.yaml`. Env `ALLOWED_ORIGINS=https://emet*.vercel.app`. Health check: `/health`.
 - Both auto-deploy on push to `main` of https://github.com/S2K7x/Emet.
 - Never move the game server to Vercel Functions: connections can land on different instances and are cut at max duration (rooms are in memory).
 - A Render redeploy wipes games in progress. Render's proxy doesn't forward server-side closes: the client watchdog (5 s silence in a room = reconnect, `client/src/net.ts`) handles it, keep it.
 - Free Render sleeps after 15 min idle (~30 s wake-up): keep the 60 s lobby timeout and the "Waking up the server" message.
-- The Vercel MCP connector is read-only for project settings and env vars: those changes go through the dashboard.
+- The Vercel MCP connector can read and update project settings (`get_project`, `update_project`, incl. deployment protection).
 
 ## Working rules
 - The server is **authoritative**: the client only sends intents, never a result.
