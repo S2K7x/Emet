@@ -10,6 +10,23 @@ Real-time multiplayer social deduction game (Among Us / Werewolf style), funny a
 - `docs/ROADMAP.md`: development stages
 - `docs/DECISIONS.md`: decision log and open questions
 
+## Stack and layout
+- `client/`: Phaser 3 + TypeScript + Vite. Phaser is loaded lazily (dynamic import) so the lobby shows first.
+- `server/`: Node + `ws`, run with `tsx`. One `Room` per game, in memory, 20 Hz tick, snapshot built per player.
+- `shared/`: protocol and map geometry used by both. `data/`: game settings, roles, map, quick chat (JSON).
+- Commands: `npm run dev` (client 5173 + server 2567), `npm run typecheck`, `npm run build`.
+- Server tests (server must be running): `npm run test:kill | test:meeting | test:reconnect | test:map`. Against a remote server: `SERVER_URL=wss://… WAIT=10 npm run test:reconnect`.
+- Bots: `node server/scripts/bots.mjs CODE 4`.
+
+## Deployment
+- **Client on Vercel**: project `emet` (team `s2k7xs-projects`), **Root Directory = `client`**, config in `client/vercel.json`. Env `VITE_SERVER_URL=wss://emet-server.onrender.com` (baked in at build time). URL: https://emet-s2k7xs-projects.vercel.app
+- **Server on Render**: service `emet-server` (free plan, Frankfurt), `render.yaml`. Env `ALLOWED_ORIGINS=https://emet*.vercel.app`. Health check: `/health`.
+- Both auto-deploy on push to `main` of https://github.com/S2K7x/Emet.
+- Never move the game server to Vercel Functions: connections can land on different instances and are cut at max duration (rooms are in memory).
+- A Render redeploy wipes games in progress. Render's proxy doesn't forward server-side closes: the client watchdog (5 s silence in a room = reconnect, `client/src/net.ts`) handles it, keep it.
+- Free Render sleeps after 15 min idle (~30 s wake-up): keep the 60 s lobby timeout and the "Waking up the server" message.
+- The Vercel MCP connector is read-only for project settings and env vars: those changes go through the dashboard.
+
 ## Working rules
 - The server is **authoritative**: the client only sends intents, never a result.
 - Roles, powers, durations and numbers are **data** (JSON/Resource), not hardcoded. Everything must be changeable in the game settings.
