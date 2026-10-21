@@ -6,8 +6,8 @@ export type MeetingStage = "discussion" | "vote" | "result";
 export const SKIP = "skip";
 
 export type ClientMsg =
-  | { t: "create"; name: string }
-  | { t: "join"; code: string; name: string }
+  | { t: "create"; name: string; look?: Look }
+  | { t: "join"; code: string; name: string; look?: Look }
   | { t: "rejoin"; code: string; token: string }
   | { t: "input"; dx: number; dy: number }
   | { t: "start" }
@@ -16,10 +16,16 @@ export type ClientMsg =
   | { t: "chat"; phrase: number; target?: string }
   | { t: "vote"; target: string }; // a player id or SKIP
 
+// Cosmetic choice (id from data/skins.json). Never tied to a role.
+export interface Look {
+  skin: string;
+}
+
 export interface PlayerView {
   id: string;
   name: string;
   color: string;
+  look: Look;
   x: number;
   y: number;
   alive: boolean;
@@ -31,6 +37,7 @@ export interface PlayerView {
 export interface BodyView {
   id: string;
   color: string;
+  look: Look;
   x: number;
   y: number;
 }

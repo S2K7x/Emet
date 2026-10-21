@@ -8,6 +8,7 @@ if (!code) {
   process.exit(1);
 }
 
+const SKINS = ["helmet", "astro", "parka", "neon", "gummy", "gnome"];
 const PHRASES_WITHOUT_TARGET = [4, 5, 6, 7, 8, 9, 10];
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -18,7 +19,7 @@ for (let i = 1; i <= Number(count); i++) {
   let wander = { dx: 0, dy: 0 };
   let chatted = 0;
 
-  ws.on("open", () => send({ t: "join", code, name: `Bot${i}` }));
+  ws.on("open", () => send({ t: "join", code, name: `Bot${i}`, look: { skin: SKINS[i % SKINS.length] } }));
   ws.on("message", (raw) => {
     const m = JSON.parse(raw);
     if (m.t === "joined") id = m.you;

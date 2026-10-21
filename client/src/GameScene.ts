@@ -1,8 +1,8 @@
 import Phaser from "phaser";
-import type { BodyView, PlayerView, ServerMsg } from "../../shared/protocol.ts";
+import type { BodyView, Look, PlayerView, ServerMsg } from "../../shared/protocol.ts";
 import type { Net } from "./net.ts";
 import { MeetingUi } from "./MeetingUi.ts";
-import { avatarSvg } from "./avatar.ts";
+import { avatarSvg, TEXTURE_BOX, textureSvg } from "./avatar.ts";
 import roles from "../../data/roles.json";
 import mapData from "../../data/map.json";
 import { MapGeometry, type MapData } from "../../shared/map.ts";
@@ -21,9 +21,17 @@ const INTERP_DELAY_MS = 100;
 const INK = 0x141118;
 const FONT = "Outfit, system-ui, sans-serif";
 
+// Character art (see avatar.ts): center of the feet in the SVG box, and on-screen height in player radii.
+const FEET = { x: 103, y: 214 };
+const HEIGHT_IN_RADII = 3;
+// Textures are rasterized larger than shown so they stay sharp on high-DPI screens.
+const OVERSAMPLE = 3;
+
 interface Avatar {
   body: Phaser.GameObjects.Container;
+  sprite: Phaser.GameObjects.Container; // flipped to face the walking direction
   label: Phaser.GameObjects.Text;
+  lastX: number;
 }
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -33,6 +41,7 @@ export class GameScene extends Phaser.Scene {
   private latest?: Snapshot;
   private avatars = new Map<string, Avatar>();
   private corpses = new Map<string, Phaser.GameObjects.GameObject[]>();
+  private pendingTextures = new Map<string, (() => void)[]>();
   private keys!: Record<"up" | "down" | "left" | "right" | "w" | "a" | "s" | "d", Phaser.Input.Keyboard.Key>;
   private lastSent = { dx: 0, dy: 0 };
   private meetingUi: MeetingUi;
@@ -47,7 +56,7 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.joined.map;
-    this.cameras.main.setBackgroundColor("#f3e1b8");
+    this.cameras.main.setBackgroundColor("#221a38");
     drawMap(this, map.data);
     this.cameras.main.setBounds(-200, -200, width + 400, height + 400);
 
@@ -138,6 +147,13 @@ export class GameScene extends Phaser.Scene {
       const avatar = this.avatars.get(id) ?? this.createAvatar(pb);
       const x = Phaser.Math.Linear(pa.x, pb.x, alpha);
       const y = Phaser.Math.Linear(pa.y, pb.y, alpha);
+      // Face the walking direction, waddle while moving.
+      const vx = x - avatar.lastX;
+      if (Math.abs(vx) > 0.3) avatar.sprite.scaleX = vx < 0 ? -1 : 1;
+      const moving = Math.hypot(pb.x - pa.x, pb.y - pa.y) > 0.5;
+      avatar.sprite.rotation = moving ? Math.sin(performance.now() / 70) * 0.09 : 0;
+      avatar.sprite.y = moving ? -Math.abs(Math.sin(performance.now() / 70)) * 3 : 0;
+      avatar.lastX = x;
       avatar.body.setPosition(x, y).setAlpha(pb.alive ? 1 : 0.35);
       avatar.label
         .setPosition(x, y - this.joined.radius * 1.1 - 12)
@@ -166,33 +182,46 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createAvatar(p: PlayerView): Avatar {
-    const body = this.add.container(p.x, p.y, this.drawHelmet(p.color, p.id === this.joined.you)).setDepth(2);
+    const r = this.joined.radius;
+    const feet = r * 0.9;
+    const ground = this.add.graphics();
+    ground.fillStyle(0x000000, 0.18).fillEllipse(0, feet, r * 2.1, r * 0.6);
+    if (p.id === this.joined.you) ground.lineStyle(3, 0xffffff).strokeEllipse(0, feet, r * 2.6, r * 0.85);
+    const sprite = this.add.container(0, 0);
+    this.characterImage(p.color, p.look, (img) => sprite.add(img.setPosition(0, feet)));
+    const body = this.add.container(p.x, p.y, [ground, sprite]).setDepth(2);
     const label = this.add
       .text(p.x, p.y, p.name, { fontFamily: FONT, fontSize: "15px", fontStyle: "800", color: "#141118", stroke: "#ffffff", strokeThickness: 4 })
       .setOrigin(0.5)
       .setDepth(3);
-    const avatar = { body, label };
+    const avatar = { body, sprite, label, lastX: p.x };
     this.avatars.set(p.id, avatar);
     if (p.id === this.joined.you) this.cameras.main.startFollow(body, true, 0.15, 0.15);
     return avatar;
   }
 
-  // Helmet character (same style as the HTML screens), centered on the player's position.
-  private drawHelmet(hex: string, me: boolean) {
-    const r = this.joined.radius;
-    const color = Phaser.Display.Color.HexStringToColor(hex).color;
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.18).fillEllipse(0, r * 0.95, r * 2.1, r * 0.6);
-    if (me) g.lineStyle(3, 0xffffff).strokeEllipse(0, r * 0.95, r * 2.6, r * 0.85);
-    g.fillStyle(0x2b2530).fillRoundedRect(-r * 0.6, r * 0.3, r * 0.45, r * 0.65, 4).fillRoundedRect(r * 0.15, r * 0.3, r * 0.45, r * 0.65, 4);
-    g.fillStyle(color).fillRoundedRect(-r, -r * 1.1, r * 2, r * 1.55, r * 0.35);
-    g.fillStyle(0x000000, 0.14).fillRoundedRect(r * 0.35, -r * 1.1, r * 0.65, r * 1.55, { tl: 0, tr: r * 0.35, bl: 0, br: r * 0.35 });
-    g.fillStyle(0xffffff).fillRect(-r * 0.18, -r * 1.1, r * 0.36, r * 0.7).fillRoundedRect(-r * 0.72, -r * 0.45, r * 1.44, r * 0.62, 5);
-    g.fillStyle(0x17131c)
-      .fillTriangle(-r * 0.6, -r * 0.33, -r * 0.1, -r * 0.18, -r * 0.6, -r * 0.12)
-      .fillTriangle(r * 0.6, -r * 0.33, r * 0.1, -r * 0.18, r * 0.6, -r * 0.12);
-    g.lineStyle(3, INK).strokeRoundedRect(-r, -r * 1.1, r * 2, r * 1.55, r * 0.35);
-    return g;
+  // Same SVG character as the HTML screens, rasterized once per color + look. Origin = center of the feet.
+  private characterImage(color: string, look: Look, ready: (img: Phaser.GameObjects.Image) => void) {
+    const key = `char:${color}:${look.skin}`;
+    const k = (this.joined.radius * HEIGHT_IN_RADII) / FEET.y; // screen px per SVG unit
+    const b = TEXTURE_BOX;
+    const make = () => {
+      if (!this.sys.isActive()) return;
+      const img = this.add.image(0, 0, key).setScale(1 / OVERSAMPLE);
+      img.setOrigin((FEET.x - b.x) / b.w, (FEET.y - b.y) / b.h);
+      ready(img);
+    };
+    if (this.textures.exists(key)) return make();
+    const pending = this.pendingTextures.get(key);
+    if (pending) return pending.push(make);
+    this.pendingTextures.set(key, [make]);
+    const el = new Image();
+    el.onload = () => {
+      if (!this.textures.exists(key)) this.textures.addImage(key, el);
+      this.pendingTextures.get(key)?.forEach((f) => f());
+      this.pendingTextures.delete(key);
+    };
+    el.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(textureSvg(color, look, k * OVERSAMPLE));
   }
 
   private syncCorpses(bodies: BodyView[]) {
@@ -205,12 +234,17 @@ export class GameScene extends Phaser.Scene {
     }
     for (const b of bodies) {
       if (this.corpses.has(b.id)) continue;
-      const color = Phaser.Display.Color.HexStringToColor(b.color).color;
+      // The victim's character, knocked over, with a big cross.
       const r = this.joined.radius;
-      this.corpses.set(b.id, [
-        this.add.ellipse(b.x, b.y, r * 2.6, r * 1.3, color).setStrokeStyle(3, INK).setDepth(1),
-        this.add.text(b.x, b.y, "✖", { fontFamily: FONT, fontSize: "20px", fontStyle: "800", color: "#ffffff", stroke: "#141118", strokeThickness: 4 }).setOrigin(0.5).setDepth(1),
-      ]);
+      const objs: Phaser.GameObjects.GameObject[] = [
+        this.add.ellipse(b.x, b.y + r * 0.4, r * 3.4, r * 1.1, 0x000000, 0.2).setDepth(1),
+        this.add.text(b.x, b.y - r * 0.2, "✖", { fontFamily: FONT, fontSize: "24px", fontStyle: "800", color: "#ffffff", stroke: "#141118", strokeThickness: 5 }).setOrigin(0.5).setDepth(1.1),
+      ];
+      this.corpses.set(b.id, objs);
+      this.characterImage(b.color, b.look, (img) => {
+        if (this.corpses.get(b.id) !== objs) return img.destroy();
+        objs.push(img.setPosition(b.x + r * 1.1, b.y + r * 0.4).setRotation(-Math.PI / 2).setDepth(1));
+      });
     }
   }
 
@@ -225,7 +259,7 @@ export class GameScene extends Phaser.Scene {
         : `Room ${this.joined.code}`;
 
     const start = $("start") as HTMLButtonElement;
-    start.style.display = isHost && s.phase !== "playing" ? "block" : "none";
+    start.style.display = isHost && (s.phase === "lobby" || s.phase === "ended") ? "block" : "none";
     start.disabled = count < this.joined.minPlayers;
     start.textContent =
       count < this.joined.minPlayers ? `Need ${this.joined.minPlayers} players` : s.phase === "ended" ? "Play again" : "Start game";
@@ -284,7 +318,7 @@ export class GameScene extends Phaser.Scene {
     $("rv-name").textContent = r.name;
     $("rv-tagline").textContent = r.tagline;
     $("rv-icon").innerHTML = `${r.icon}<b>${s.players.filter((p) => p.alive).length}</b>alive`;
-    $("rv-char").innerHTML = avatarSvg(me?.color ?? "#ffffff", { sticker: true, ghost: key === "ghost" });
+    $("rv-char").innerHTML = avatarSvg(me?.color ?? "#ffffff", { sticker: true, ghost: key === "ghost", look: me?.look });
     $("rv-stat-label").textContent = "Room";
     $("rv-stat").textContent = this.joined.code;
     reveal.style.display = "flex";

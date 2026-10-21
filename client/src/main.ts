@@ -1,7 +1,8 @@
 import type Phaser from "phaser";
-import type { ServerMsg } from "../../shared/protocol.ts";
+import type { Look, ServerMsg } from "../../shared/protocol.ts";
 import { Net } from "./net.ts";
 import { avatarSvg } from "./avatar.ts";
+import skins from "../../data/skins.json";
 
 // Phaser (~1 MB) is only needed in game: the lobby shows first, the engine downloads in the background.
 const gameModules = Promise.all([import("phaser"), import("./GameScene.ts")]);
@@ -38,12 +39,36 @@ const LOBBY_THEMES = [
   ["#e03c31", "#c8243a"],
   ["#7fd63a", "#4f9a2a"],
 ];
+// Chosen look (cosmetic, open to everyone), remembered on this device.
+const look: Look = (() => {
+  try {
+    return { skin: JSON.parse(localStorage.getItem("emet.look") ?? "{}").skin ?? skins.default };
+  } catch {
+    return { skin: skins.default };
+  }
+})();
 let theme = 0;
-const showTheme = () => {
-  const [bg, hero] = LOBBY_THEMES[theme++ % LOBBY_THEMES.length];
-  $("lobby").style.setProperty("--hero", bg);
-  $("lobby-char").innerHTML = avatarSvg(hero);
+let hero = LOBBY_THEMES[0][1];
+const showLook = () => {
+  const s = skins.skins.find((k) => k.id === look.skin) ?? skins.skins[0];
+  look.skin = s.id;
+  $("lobby-char").innerHTML = avatarSvg(hero, { look });
+  $("skin-name").innerHTML = `${s.name}<small>${s.universe}</small>`;
+  localStorage.setItem("emet.look", JSON.stringify(look));
 };
+const showTheme = () => {
+  const [bg, h] = LOBBY_THEMES[theme++ % LOBBY_THEMES.length];
+  hero = h;
+  $("lobby").style.setProperty("--hero", bg);
+  showLook();
+};
+const stepSkin = (d: number) => {
+  const i = skins.skins.findIndex((k) => k.id === look.skin);
+  look.skin = skins.skins[(i + d + skins.skins.length) % skins.skins.length].id;
+  showLook();
+};
+$("skin-prev").onclick = () => stepSkin(-1);
+$("skin-next").onclick = () => stepSkin(1);
 showTheme();
 const themeTimer = setInterval(showTheme, 2600);
 
@@ -71,6 +96,7 @@ async function startGame(msg: Extract<ServerMsg, { t: "joined" }>) {
     scale: { mode: Phaser.Scale.RESIZE, width: window.innerWidth, height: window.innerHeight },
     scene: new GameScene(net, msg),
   });
+  if (import.meta.env.DEV) Object.assign(window, { game }); // dev only: inspect the scene from the console
 }
 
 function name() {
@@ -92,8 +118,8 @@ async function lobbySend(msg: Parameters<Net["send"]>[0]) {
   }
 }
 
-$("create").onclick = () => lobbySend({ t: "create", name: name() });
-$("join").onclick = () => lobbySend({ t: "join", code: codeInput.value.trim(), name: name() });
+$("create").onclick = () => lobbySend({ t: "create", name: name(), look });
+$("join").onclick = () => lobbySend({ t: "join", code: codeInput.value.trim(), name: name(), look });
 
 // Page reloaded (common on mobile): resume this tab's game.
 const saved = Net.savedSession();

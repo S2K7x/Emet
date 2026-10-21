@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { WebSocket } from "ws";
-import type { BodyView, ChatLine, Phase, PlayerView, Role, ServerMsg, YouView } from "../../shared/protocol.ts";
+import type { BodyView, ChatLine, Look, Phase, PlayerView, Role, ServerMsg, YouView } from "../../shared/protocol.ts";
 import config from "../../data/game.json" with { type: "json" };
 import quickchat from "../../data/quickchat.json" with { type: "json" };
 import mapData from "../../data/map.json" with { type: "json" };
+import skins from "../../data/skins.json" with { type: "json" };
 import { MapGeometry, type MapData } from "../../shared/map.ts";
 import { Meeting } from "./meeting.ts";
 
@@ -13,6 +14,7 @@ interface Player {
   id: string;
   name: string;
   color: string;
+  look: Look;
   x: number;
   y: number;
   input: { dx: number; dy: number };
@@ -44,7 +46,7 @@ export class Room {
     if (this.players.size >= config.maxPlayers) return "Room is full";
   }
 
-  add(id: string, name: string, socket: WebSocket) {
+  add(id: string, name: string, look: unknown, socket: WebSocket) {
     const used = new Set([...this.players.values()].map((p) => p.color));
     const color = config.colors.find((c) => !used.has(c)) ?? config.colors[0];
     const spot = map.spawnPoint(this.players.size, config.maxPlayers);
@@ -52,6 +54,7 @@ export class Room {
       id,
       name: name.slice(0, 16) || "Player",
       color,
+      look: cleanLook(look),
       x: spot.x,
       y: spot.y,
       input: { dx: 0, dy: 0 },
@@ -216,7 +219,7 @@ export class Room {
     if (!target) return;
 
     target.alive = false;
-    this.bodies.push({ id: target.id, color: target.color, x: Math.round(target.x), y: Math.round(target.y) });
+    this.bodies.push({ id: target.id, color: target.color, look: target.look, x: Math.round(target.x), y: Math.round(target.y) });
     killer.nextKillAt = now + config.kill.cooldown * 1000;
     this.checkVictory();
   }
@@ -286,6 +289,7 @@ export class Room {
         id: p.id,
         name: p.name,
         color: p.color,
+        look: p.look,
         x: Math.round(p.x),
         y: Math.round(p.y),
         alive: p.alive,
@@ -319,4 +323,11 @@ function shuffle<T>(arr: T[]) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+// The client's choice is untrusted: an unknown id falls back to the default skin.
+function cleanLook(raw: unknown): Look {
+  const l = (raw ?? {}) as Partial<Record<keyof Look, unknown>>;
+  const skin = skins.skins.some((s) => s.id === l.skin) ? String(l.skin) : skins.default;
+  return { skin };
 }

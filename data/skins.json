@@ -1,0 +1,11 @@
+{
+  "default": "helmet",
+  "skins": [
+    { "id": "helmet", "name": "Helmet", "universe": "Nexus" },
+    { "id": "astro", "name": "Astro", "universe": "Moon" },
+    { "id": "parka", "name": "Parka", "universe": "Ice" },
+    { "id": "neon", "name": "Glitch", "universe": "Neon" },
+    { "id": "gummy", "name": "Gummy", "universe": "Candy" },
+    { "id": "gnome", "name": "Gnome", "universe": "Nexus" }
+  ]
+}

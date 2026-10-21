@@ -45,6 +45,7 @@
 
 - Visual direction (ref. "gnome cards" video): full-page bright color fills, bold geometric font (Outfit), chibi helmet characters that spill out of the frame, rounded white pills, big numbers, curved black "Let's go ›››" bar at the bottom. Role colors and text in `data/roles.json`.
 - "Nexus" map (`data/map.json`): central hub + 4 zones (Moon, Ice, Neon, Candy), walls and obstacles with server-side collision. Kill and report require line of sight (not through a wall). Zone rules pushed to Phase 4.
+- Skins (`data/skins.json`): 6 characters (Helmet, Astro, Parka, Glitch, Gummy, Gnome), chosen in the lobby, **cosmetic only** and open to everyone. The server-assigned color is drawn on every skin and stays the main way to recognize a player; two players can share a skin. **Every character carries a sword**, whatever their role, so it gives nothing away (an optional sword would have read as "killer").
 - Minimap (top right, tap = enlarged, M key on PC): shows the map, your own position and the camera view. Other players are **not** shown by default (otherwise you'd know who is alone with whom): setting `minimap.showPlayers` in `data/game.json`.
 
 ## Open questions
@@ -68,3 +69,5 @@
 - 2026-10-20: game translated to English (UI, `data/*.json`, server messages, README).
 - 2026-10-20: design docs (`docs/`), `CLAUDE.md`, code comments and test messages translated to English.
 - 2026-10-21: deployment split: client on Vercel, server on Render (origin allowlist, heartbeat, health check, lazy Phaser).
+- 2026-10-21: skins (6 characters), chosen in the lobby, cosmetic only. Everyone carries a sword.
+- 2026-10-21: map visual pass (drop shadows, zone-tinted walls, portal doors, decor landmarks, ambient motion, space backdrop). No collision change.

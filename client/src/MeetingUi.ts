@@ -1,6 +1,7 @@
 import { SKIP, type ChatLine, type ServerMsg } from "../../shared/protocol.ts";
 import quickchat from "../../data/quickchat.json";
 import type { Net } from "./net.ts";
+import { avatarSvg } from "./avatar.ts";
 
 type Snapshot = Extract<ServerMsg, { t: "snapshot" }>;
 
@@ -68,7 +69,7 @@ export class MeetingUi {
         m.voted.includes(p.id) ? `<span class="tag voted">✔ voted</span>` : "",
         m.result ? `<span class="tag votes">${m.result.tally[p.id] ?? 0} vote${m.result.tally[p.id] === 1 ? "" : "s"}</span>` : "",
       ].join("");
-      card.innerHTML = `<span class="dot" style="background:${p.color}"></span><span class="who"><span class="name"></span><span class="tags">${tags}</span></span>`;
+      card.innerHTML = `<span class="face" style="--c:${p.color}">${avatarSvg(p.color, { look: p.look })}</span><span class="who"><span class="name"></span><span class="tags">${tags}</span></span>`;
       (card.querySelector(".name") as HTMLElement).textContent = p.name; // name = text, never HTML
       if (p.alive) card.onclick = () => {
         this.selected = this.selected === p.id ? undefined : p.id;

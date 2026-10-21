@@ -24,6 +24,9 @@ A game is played on a map made of **4 zones**, each in a different universe. Eac
 - Each zone has 1 door to the Nexus and 1 door to each of its 2 neighboring zones (simple doors for now; portals come in Phase 4).
 - Walls and obstacles block movement **and line of sight**: no killing or reporting through a wall.
 - Zone rules (ice, gravity, etc.) are not active yet: Phase 1 only does the scenery.
+- Visual style: one light source (top left), every wall and obstacle casts the same drop shadow; wall tops are tinted with their zone's color. Doors between zones (`doors` in `map.json`) are drawn as shimmering portal thresholds.
+- Decor (`decor` in `map.json`) never collides, so it stays flat (footprints, puddles, cables, donuts) or smaller than a player (rocks, penguins, plants, gumdrops): anything big must be a real obstacle. Decor doubles as landmarks for meeting callouts ("by the penguins", "near the NO EXIT sign").
+- Ambient motion per zone (twinkling stars, snowfall, neon motes, candy bubbles), purely cosmetic.
 - Automated check: `npm run test:map` (free spawns, all zones reachable, walls that block).
 
 ## To do

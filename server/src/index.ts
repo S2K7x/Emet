@@ -86,14 +86,14 @@ wss.on("connection", (socket) => {
       const code = newCode();
       room = new Room(code, () => rooms.delete(code));
       rooms.set(code, room);
-      room.add(id, String(msg.name ?? ""), socket);
+      room.add(id, String(msg.name ?? ""), msg.look, socket);
     } else if (msg.t === "join" && !room) {
       const target = rooms.get(String(msg.code ?? "").toUpperCase());
       if (!target) return send(socket, { t: "error", message: "Room not found" });
       const refusal = target.canJoin;
       if (refusal) return send(socket, { t: "error", message: refusal });
       room = target;
-      room.add(id, String(msg.name ?? ""), socket);
+      room.add(id, String(msg.name ?? ""), msg.look, socket);
     } else if (msg.t === "rejoin" && !room) {
       const target = rooms.get(String(msg.code ?? "").toUpperCase());
       const rejoined = target?.rejoin(String(msg.token ?? ""), socket);

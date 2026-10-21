@@ -22,6 +22,17 @@ export interface Prop {
   r?: number;
 }
 
+// Scenery only (never collides): flat or small, so it never looks like an obstacle.
+export interface Decor {
+  type: string;
+  x: number;
+  y: number;
+  x2?: number;
+  y2?: number;
+  w?: number;
+  text?: string;
+}
+
 export interface MapData {
   name: string;
   width: number;
@@ -29,6 +40,8 @@ export interface MapData {
   spawn: { x: number; y: number; rx: number; ry: number };
   zones: Zone[];
   walls: number[][]; // [x, y, w, h]
+  doors?: number[][]; // [x, y, w, h] openings between zones, drawn as portal gates
+  decor?: Decor[];
   props: Prop[];
 }
 
