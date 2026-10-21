@@ -1,0 +1,44 @@
+{
+  "name": "Nexus",
+  "width": 2000,
+  "height": 1400,
+  "spawn": { "x": 1000, "y": 700, "rx": 150, "ry": 105 },
+  "zones": [
+    { "id": "lune", "label": "MOON", "labelAt": [380, 300], "x": 0, "y": 0, "w": 1000, "h": 700, "floor": "#e7e3f4", "accent": "#b9b0d9" },
+    { "id": "glace", "label": "ICE", "x": 1000, "y": 0, "w": 1000, "h": 700, "floor": "#dcf1fb", "accent": "#9fd3ec" },
+    { "id": "neon", "label": "NEON", "x": 0, "y": 700, "w": 1000, "h": 700, "floor": "#2a2340", "accent": "#ff4fd8" },
+    { "id": "candy", "label": "CANDY", "labelAt": [1560, 900], "x": 1000, "y": 700, "w": 1000, "h": 700, "floor": "#ffe3ef", "accent": "#ff8cc0" },
+    { "id": "hub", "label": "NEXUS", "x": 760, "y": 520, "w": 480, "h": 360, "floor": "#fff4dd", "accent": "#f6b928" }
+  ],
+  "walls": [
+    [760, 520, 60, 40], [940, 520, 120, 40], [1180, 520, 60, 40],
+    [760, 840, 60, 40], [940, 840, 120, 40], [1180, 840, 60, 40],
+    [760, 520, 40, 360], [1200, 520, 40, 360],
+    [980, 0, 40, 200], [980, 320, 40, 200],
+    [980, 880, 40, 200], [980, 1200, 40, 200],
+    [0, 680, 260, 40], [380, 680, 380, 40],
+    [1240, 680, 380, 40], [1740, 680, 260, 40]
+  ],
+  "props": [
+    { "type": "table", "shape": "circle", "x": 1000, "y": 700, "r": 55 },
+
+    { "type": "crater", "shape": "circle", "x": 230, "y": 190, "r": 70 },
+    { "type": "crater", "shape": "circle", "x": 600, "y": 430, "r": 85 },
+    { "type": "rocket", "shape": "rect", "x": 760, "y": 90, "w": 90, "h": 170 },
+    { "type": "flag", "x": 380, "y": 540 },
+
+    { "type": "igloo", "shape": "circle", "x": 1700, "y": 230, "r": 100 },
+    { "type": "iceblock", "shape": "rect", "x": 1240, "y": 140, "w": 120, "h": 90 },
+    { "type": "iceblock", "shape": "rect", "x": 1430, "y": 450, "w": 140, "h": 100 },
+    { "type": "iceblock", "shape": "rect", "x": 1820, "y": 500, "w": 90, "h": 90 },
+
+    { "type": "server", "shape": "rect", "x": 100, "y": 880, "w": 60, "h": 220 },
+    { "type": "server", "shape": "rect", "x": 200, "y": 880, "w": 60, "h": 220 },
+    { "type": "arcade", "shape": "rect", "x": 620, "y": 1180, "w": 100, "h": 110 },
+    { "type": "arcade", "shape": "rect", "x": 770, "y": 1180, "w": 100, "h": 110 },
+
+    { "type": "lollipop", "shape": "circle", "x": 1300, "y": 1010, "r": 55 },
+    { "type": "lollipop", "shape": "circle", "x": 1810, "y": 1240, "r": 55 },
+    { "type": "cake", "shape": "rect", "x": 1480, "y": 1120, "w": 190, "h": 130 }
+  ]
+}

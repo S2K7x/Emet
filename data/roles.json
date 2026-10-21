@@ -1,0 +1,20 @@
+{
+  "innocent": {
+    "name": "Innocent",
+    "tagline": "Survive and unmask the killers",
+    "color": "#7fd63a",
+    "icon": "🛡️"
+  },
+  "killer": {
+    "name": "Killer",
+    "tagline": "Take them out without getting caught",
+    "color": "#e03c31",
+    "icon": "🗡️"
+  },
+  "ghost": {
+    "name": "Ghost",
+    "tagline": "You're dead… but you can still help",
+    "color": "#6a4bd6",
+    "icon": "👻"
+  }
+}

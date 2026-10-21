@@ -1,0 +1,55 @@
+{
+  "tickRate": 20,
+  "minPlayers": 4,
+  "maxPlayers": 10,
+  "player": {
+    "speed": 220,
+    "radius": 18
+  },
+  "colors": [
+    "#d7263d",
+    "#1f6feb",
+    "#2bb24c",
+    "#ffd400",
+    "#ff6a13",
+    "#8a3ffc",
+    "#ff6fb5",
+    "#00b3b3",
+    "#8b5a2b",
+    "#7d8597"
+  ],
+  "kill": {
+    "range": 80,
+    "cooldown": 20,
+    "initialCooldown": 10
+  },
+  "killers": {
+    "byPlayers": {
+      "4": 1,
+      "5": 1,
+      "6": 1,
+      "7": 2,
+      "8": 2,
+      "9": 2,
+      "10": 3
+    },
+    "knowEachOther": true
+  },
+  "report": {
+    "range": 90
+  },
+  "minimap": {
+    "enabled": true,
+    "showPlayers": false
+  },
+  "meeting": {
+    "discussion": 15,
+    "vote": 45,
+    "result": 5,
+    "revealRoleOnEject": false
+  },
+  "chat": {
+    "minInterval": 1
+  },
+  "reconnectGrace": 30
+}

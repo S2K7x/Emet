@@ -1,0 +1,44 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:server"
+      ],
+      "port": 2567
+    },
+    {
+      "name": "client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:client"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "prod",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PORT=8080",
+        "npm",
+        "start"
+      ],
+      "port": 8080
+    },
+    {
+      "name": "prod-test",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PORT=8090",
+        "ALLOWED_ORIGINS=http://localhost:8090",
+        "npm",
+        "start"
+      ],
+      "port": 8090
+    }
+  ]
+}

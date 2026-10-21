@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Emet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" />
+    <style>
+      :root {
+        --ink: #141118; --paper: #fff; --cream: #fdf3dc;
+        --yellow: #f6b928; --purple: #6a4bd6; --red: #e03c31; --green: #7fd63a; --orange: #f58231;
+        --radius: 28px; --font: "Outfit", system-ui, sans-serif;
+      }
+      html, body { margin: 0; height: 100%; background: var(--cream); color: var(--ink); font-family: var(--font); overflow: hidden; -webkit-tap-highlight-color: transparent; }
+      button, input { font-family: inherit; }
+
+      /* Full-page card, "character sheet" style */
+      .hero { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 28px 24px 0; box-sizing: border-box; overflow: hidden; background: var(--hero, var(--yellow)); transition: background .4s; }
+      .hero h1, .hero h2 { font-size: clamp(34px, 9vw, 52px); line-height: 1.02; font-weight: 800; margin: 18px 0 6px; letter-spacing: -.02em; }
+      .hero .sub { font-size: 16px; opacity: .8; margin: 0; }
+      .hero .stage { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; min-height: 0; }
+      .hero-char { height: min(42vh, 360px); filter: drop-shadow(0 18px 18px rgba(0,0,0,.18)); transform: translateX(8%); animation: bob 2.4s ease-in-out infinite; }
+      @keyframes bob { 50% { transform: translateX(8%) translateY(-8px) rotate(-1.5deg); } }
+      .pill { position: absolute; color: var(--ink); left: 0; top: 8%; background: var(--paper); border-radius: 20px; padding: 10px 12px; text-align: center; font-weight: 800; font-size: 15px; line-height: 1.15; box-shadow: 0 6px 16px rgba(0,0,0,.08); }
+      .pill b { display: block; font-size: 20px; }
+      .stat { text-align: center; margin-bottom: 22px; }
+      .stat small { display: block; font-size: 14px; opacity: .8; }
+      .stat strong { font-size: 48px; font-weight: 800; letter-spacing: -.02em; }
+
+      /* Curved black "Let's Go" bar */
+      .letsgo { position: relative; margin: 0 -24px; padding: 34px 28px calc(26px + env(safe-area-inset-bottom)); background: var(--ink); color: var(--paper); border-radius: 50% 50% 0 0 / 34px 34px 0 0; display: flex; align-items: center; justify-content: space-between; font-size: 20px; font-weight: 800; border: none; cursor: pointer; width: calc(100% + 48px); text-align: left; }
+      .letsgo::before { content: "💀"; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); width: 34px; height: 30px; border-radius: 17px 17px 0 0; background: var(--ink); font-size: 14px; line-height: 30px; text-align: center; }
+      .letsgo::after { content: "›››"; letter-spacing: 2px; opacity: .9; animation: chev 1.2s steps(3) infinite; }
+      @keyframes chev { 0% { opacity: .4; } 100% { opacity: 1; } }
+      .letsgo:disabled { color: #777; cursor: default; }
+
+      /* Lobby */
+      #lobby .form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+      #lobby input { font-size: 18px; font-weight: 600; padding: 14px 18px; border-radius: 999px; border: none; background: var(--paper); color: var(--ink); width: 100%; box-sizing: border-box; outline: none; }
+      #lobby input:focus { box-shadow: 0 0 0 3px var(--ink); }
+      #lobby .row { display: flex; gap: 8px; }
+      #lobby .row input { flex: 1; min-width: 0; letter-spacing: .2em; text-transform: uppercase; }
+      #join:disabled { opacity: .5; cursor: default; }
+      #join { border: none; border-radius: 999px; padding: 0 22px; background: var(--ink); color: var(--paper); font-size: 17px; font-weight: 800; cursor: pointer; }
+      #error { color: var(--ink); font-weight: 600; min-height: 1.2em; }
+      #error:not(:empty)::before { content: "⚠ "; }
+
+      /* Role reveal */
+      #reveal { display: none; z-index: 5; }
+      #reveal .role-kicker { font-weight: 600; font-size: 15px; opacity: .8; margin-top: 12px; }
+
+      /* In game */
+      #hud { position: absolute; top: 12px; left: 12px; font-size: 15px; font-weight: 800; display: none; pointer-events: none; background: var(--paper); padding: 8px 14px; border-radius: 999px; box-shadow: 0 6px 16px rgba(0,0,0,.1); }
+      #role { position: absolute; top: 12px; right: 12px; font-size: 16px; font-weight: 800; display: none; padding: 8px 14px; border-radius: 999px; color: var(--paper); box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+      #role.killer { background: var(--red); }
+      #role.innocent { background: var(--green); color: var(--ink); }
+      #role.ghost { background: var(--purple); }
+      .action { white-space: nowrap; position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); font-size: 20px; font-weight: 800; padding: 18px 28px; border-radius: 999px; border: none; color: var(--paper); display: none; touch-action: manipulation; cursor: pointer; box-shadow: 0 8px 0 rgba(0,0,0,.25); transition: transform .08s; }
+      .action:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+      .action:disabled { opacity: .45; box-shadow: none; cursor: default; }
+      #start { left: 50%; transform: translateX(-50%); background: var(--ink); z-index: 6; } /* above the end screen for "Play again" */
+      #start:active:not(:disabled) { transform: translate(-50%, 4px); }
+      #kill { right: 24px; background: var(--red); }
+      #report { left: 24px; background: var(--yellow); color: var(--ink); }
+      #minimap { position: absolute; top: 60px; right: 12px; width: 132px; display: none; box-sizing: border-box; border: 3px solid var(--ink); border-radius: 14px; background: var(--ink); box-shadow: 0 6px 16px rgba(0,0,0,.15); cursor: pointer; touch-action: manipulation; }
+      #minimap.big { top: 50%; left: 50%; right: auto; width: min(92vw, 640px); transform: translate(-50%, -50%); border-width: 4px; border-radius: 22px; z-index: 4; }
+      #minimap-backdrop { position: absolute; inset: 0; display: none; z-index: 3; background: rgba(20,17,24,.45); touch-action: none; }
+      #net { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); display: none; background: var(--orange); color: var(--paper); padding: 8px 16px; border-radius: 999px; font-weight: 800; z-index: 10; }
+
+      /* Game over */
+      #end { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; font-size: clamp(40px, 11vw, 72px); font-weight: 800; line-height: 1; letter-spacing: -.03em; padding: 24px; box-sizing: border-box; pointer-events: none; text-align: center; color: var(--paper); background: color-mix(in srgb, var(--hero, var(--ink)) 92%, transparent); }
+
+      /* Meeting */
+      #meeting { position: absolute; inset: 0; display: none; flex-direction: column; gap: 12px; padding: 20px 16px; box-sizing: border-box; background: var(--purple); color: var(--paper); overflow-y: auto; }
+      #mt-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+      #mt-title { font-size: 26px; font-weight: 800; line-height: 1.05; letter-spacing: -.01em; }
+      #mt-timer { flex: none; background: var(--paper); color: var(--ink); border-radius: 18px; padding: 8px 12px; font-weight: 800; font-size: 15px; text-align: center; }
+      #mt-players { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+      .card { display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 10px; border-radius: 999px; background: var(--paper); border: 3px solid transparent; color: var(--ink); font-size: 16px; font-weight: 800; text-align: left; cursor: pointer; }
+      .card.selected { border-color: var(--ink); transform: scale(1.03); }
+      .card.dead { opacity: .45; cursor: default; text-decoration: line-through; }
+      .card .dot { width: 26px; height: 26px; border-radius: 9px; flex: none; box-shadow: inset -6px 0 0 rgba(0,0,0,.15); }
+      .card { border-radius: 22px; }
+      .card .who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+      .card .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .card .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+      .card .tags:empty { display: none; }
+      .tag { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; white-space: nowrap; line-height: 1.2; }
+      .tag.me { background: var(--ink); color: var(--paper); }
+      .tag.voted { background: var(--green); color: var(--ink); }
+      .tag.votes { background: var(--yellow); color: var(--ink); }
+      #mt-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+      #mt-actions button { font-size: 17px; font-weight: 800; padding: 14px 20px; border-radius: 999px; border: none; cursor: pointer; }
+      #mt-vote { background: var(--ink); color: var(--paper); flex: 1; }
+      #mt-skip { background: var(--paper); color: var(--ink); }
+      #mt-actions button:disabled, #mt-quick button:disabled { opacity: .4; cursor: default; }
+      #mt-log { flex: 1; min-height: 100px; overflow-y: auto; background: rgba(0,0,0,.2); border-radius: 22px; padding: 12px 14px; font-size: 15px; display: flex; flex-direction: column; gap: 6px; }
+      #mt-log b { -webkit-text-stroke: .3px rgba(0,0,0,.4); }
+      #mt-log .ghost { opacity: .7; font-style: italic; }
+      #mt-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+      #mt-quick button { background: rgba(255,255,255,.18); color: var(--paper); border: none; border-radius: 999px; padding: 9px 13px; font-size: 15px; font-weight: 600; cursor: pointer; }
+      #mt-result { font-size: 24px; font-weight: 800; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <div id="lobby" class="hero">
+      <h1>Who's lying<br />in the multiverse?</h1>
+      <p class="sub">5 to 10 players · 5 minutes of chaos</p>
+      <div class="stage">
+        <div class="pill">★<b>10</b>max</div>
+        <div id="lobby-char"></div>
+      </div>
+      <div class="form">
+        <input id="name" placeholder="Your name" maxlength="16" />
+        <div class="row">
+          <input id="code" placeholder="CODE" maxlength="4" />
+          <button id="join">Join</button>
+        </div>
+        <div id="error"></div>
+      </div>
+      <button id="create" class="letsgo">Create a room</button>
+    </div>
+    <div id="reveal" class="hero">
+      <div class="role-kicker">Your role</div>
+      <h2 id="rv-name"></h2>
+      <p class="sub" id="rv-tagline"></p>
+      <div class="stage">
+        <div class="pill" id="rv-icon"></div>
+        <div id="rv-char"></div>
+      </div>
+      <div class="stat"><small id="rv-stat-label">Players</small><strong id="rv-stat"></strong></div>
+      <button id="rv-go" class="letsgo">Let's go</button>
+    </div>
+    <div id="hud"></div>
+    <div id="role"></div>
+    <div id="minimap-backdrop"></div>
+    <canvas id="minimap" title="Map (M)"></canvas>
+    <button id="start" class="action">Start game</button>
+    <button id="kill" class="action">Kill</button>
+    <button id="report" class="action">Report</button>
+    <div id="meeting">
+      <div id="mt-head"><span id="mt-title"></span><span id="mt-timer"></span></div>
+      <div id="mt-players"></div>
+      <div id="mt-result"></div>
+      <div id="mt-actions"><button id="mt-vote">Vote</button><button id="mt-skip">Skip</button></div>
+      <div id="mt-log"></div>
+      <div id="mt-quick"></div>
+    </div>
+    <div id="end"></div>
+    <div id="net">Reconnecting…</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

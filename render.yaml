@@ -1,0 +1,15 @@
+# Render Blueprint: the authoritative game server (WebSocket). The client is on Vercel.
+services:
+  - type: web
+    name: emet-server
+    runtime: node
+    plan: free # sleeps after 15 min idle (~30 s to wake up); "starter" stays on
+    region: frankfurt
+    buildCommand: npm ci --workspace server --include-workspace-root
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: ALLOWED_ORIGINS
+        sync: false # e.g. https://emet.vercel.app,https://emet-*.vercel.app
