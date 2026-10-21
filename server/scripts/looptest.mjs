@@ -40,12 +40,15 @@ async function walk(b, x, y, close = 12) {
 async function newGame() {
   const bots = ["A", "B", "C", "D"].map(bot);
   await Promise.all(bots.map((b) => b.open));
+  const until = async (cond) => {
+    for (let i = 0; i < 100 && !cond(); i++) await sleep(100);
+  };
   bots[0].send({ t: "create", name: "A" });
-  await sleep(200);
+  await until(() => bots[0].code);
   for (const b of bots.slice(1)) b.send({ t: "join", code: bots[0].code, name: b.name });
-  await sleep(300);
+  await until(() => bots[0].snap?.players.length === bots.length);
   bots[0].send({ t: "start" });
-  await sleep(300);
+  await until(() => bots.every((b) => b.snap?.phase === "playing"));
   return bots;
 }
 
