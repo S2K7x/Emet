@@ -26,7 +26,7 @@ Client on **Vercel**, game server on **Render** (Vercel can't keep one room on o
 
 1. Push the repo to GitHub.
 2. **Render** → New → Blueprint → pick the repo (`render.yaml`). Set `ALLOWED_ORIGINS` to your Vercel URL(s), e.g. `https://emet.vercel.app,https://emet-*.vercel.app`. Note the server URL (`https://emet-server.onrender.com`).
-3. **Vercel** → import the repo (`vercel.json` is already set). Env var `VITE_SERVER_URL=wss://emet-server.onrender.com`. Deploy.
+3. **Vercel** → import the repo with **Root Directory = `client`** (`client/vercel.json` is already set). Env var `VITE_SERVER_URL=wss://emet-server.onrender.com`. Deploy.
 4. Share the Vercel link. The free Render plan sleeps after 15 min idle: the first visitor waits ~30 s ("Waking up the server…").
 
 Bots against the deployed server: `SERVER_URL=wss://emet-server.onrender.com node server/scripts/bots.mjs CODE 4`.
