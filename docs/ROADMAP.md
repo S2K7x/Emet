@@ -14,7 +14,7 @@
 
 ## Phase 2: quests and ghosts
 - [x] Shared quest bar, 8 mini-games (one per station, `data/minigames.json`)
-- [ ] Ghosts: ghost chat · [x] ghost quests (count + weight revival)
+- [x] Ghosts: ghost chat in game · ghost quests (count + weight revival)
 
 ## Phase 3: roles
 - [x] Data-driven role system

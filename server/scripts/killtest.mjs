@@ -11,12 +11,13 @@ setTimeout(() => (console.log("FAIL timeout"), process.exit(1)), 90_000);
 
 function bot(name) {
   const ws = new WebSocket(process.env.SERVER_URL ?? "ws://localhost:2567");
-  const b = { name, ws, snap: null, id: null, code: null, send: (m) => ws.send(JSON.stringify(m)) };
+  const b = { name, ws, snap: null, id: null, code: null, chats: [], send: (m) => ws.send(JSON.stringify(m)) };
   ws.on("message", (raw) => {
     const m = JSON.parse(raw);
     if (m.t === "joined") Object.assign(b, { id: m.you, code: m.code });
     if (m.t === "snapshot") b.snap = m;
     if (m.t === "error") b.error = m.message;
+    if (m.t === "chat") b.chats.push(m);
   });
   b.open = new Promise((r) => ws.on("open", r));
   return b;
@@ -87,6 +88,15 @@ check(innocents[1].snap.bodies.length === 1, "the body is visible to the living"
 check(!innocents[1].snap.players.some((p) => p.id === innocents[0].id), "the ghost is invisible to the living");
 check(innocents[0].snap.players.length === 4, "the ghost sees everyone");
 check(innocents[0].snap.players.every((p) => p.id === innocents[0].id || p.role === undefined), "the ghost doesn't see roles");
+
+// Ghost chat during the round: ghosts only.
+innocents[0].send({ t: "chat", phrase: 0, target: k.id });
+await sleep(200);
+check(innocents[0].chats.some((c) => c.ghost && c.from === innocents[0].id && c.target === k.id), "a ghost can chat during the round");
+check(bots.every((b) => b === innocents[0] || b.chats.length === 0), "the living don't receive ghost chat");
+innocents[1].send({ t: "chat", phrase: 6 });
+await sleep(200);
+check(bots.every((b) => !b.chats.some((c) => c.from === innocents[1].id)), "the living can't chat during the round");
 
 innocents[0].send({ t: "kill" });
 innocents[1].send({ t: "kill" });

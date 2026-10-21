@@ -9,6 +9,7 @@ import { MapGeometry, type MapData } from "../../shared/map.ts";
 import { drawMap } from "./MapView.ts";
 import { Minimap } from "./Minimap.ts";
 import { MiniGame } from "./MiniGames.ts";
+import { GhostChat } from "./GhostChat.ts";
 import config from "../../data/game.json";
 import powers from "../../data/powers.json";
 
@@ -62,6 +63,7 @@ export class GameScene extends Phaser.Scene {
   private keys!: Record<"up" | "down" | "left" | "right" | "w" | "a" | "s" | "d", Phaser.Input.Keyboard.Key>;
   private lastSent = { dx: 0, dy: 0 };
   private meetingUi: MeetingUi;
+  private ghostChat: GhostChat;
   private lastPhase?: string;
   private revealed = ""; // last role shown full screen
   private minimap = new Minimap(map.data);
@@ -69,6 +71,7 @@ export class GameScene extends Phaser.Scene {
   constructor(private net: Net, private joined: Joined) {
     super("game");
     this.meetingUi = new MeetingUi(net, joined.you);
+    this.ghostChat = new GhostChat(net);
   }
 
   create() {
@@ -102,7 +105,11 @@ export class GameScene extends Phaser.Scene {
 
     this.net.onMessage = (msg) => {
       if (msg.t === "snapshot") this.pushSnapshot(msg);
-      else if (msg.t === "chat") this.meetingUi.addChat(msg);
+      else if (msg.t === "chat" && this.latest?.phase === "playing") {
+        // Ghost chat during the round (only ghosts ever receive it): log + bubble over the ghost.
+        this.ghostChat.add(msg);
+        this.bubble(msg.from, this.ghostChat.text(msg));
+      } else if (msg.t === "chat") this.meetingUi.addChat(msg);
       else if (msg.t === "fx") this.showFx(msg);
     };
   }
@@ -115,6 +122,7 @@ export class GameScene extends Phaser.Scene {
     this.syncItems(msg.items ?? []);
     this.meetingUi.remember(msg);
     this.meetingUi.update(msg);
+    this.ghostChat.update(msg);
     // Phase change: the server reset all intents, so we'll resend ours.
     if (msg.phase !== this.lastPhase) this.lastSent = { dx: NaN, dy: NaN };
     this.lastPhase = msg.phase;
@@ -247,6 +255,24 @@ export class GameScene extends Phaser.Scene {
     this.avatars.set(p.id, avatar);
     if (p.id === this.joined.you) this.cameras.main.startFollow(body, true, 0.15, 0.15);
     return avatar;
+  }
+
+  // Speech bubble that follows a player for a few seconds.
+  private bubble(id: string, text: string) {
+    const avatar = this.avatars.get(id);
+    if (!avatar) return;
+    const t = this.add
+      .text(0, 0, text, { fontFamily: FONT, fontSize: "14px", fontStyle: "700", color: "#ffffff", backgroundColor: "#2a1f50", padding: { x: 10, y: 6 }, wordWrap: { width: 200 } })
+      .setOrigin(0.5, 1)
+      .setDepth(5)
+      .setAlpha(0.95);
+    const follow = () => t.setPosition(avatar.body.x, avatar.body.y - this.joined.radius * 1.1 - 30);
+    follow();
+    this.events.on("update", follow);
+    this.time.delayedCall(3500, () => {
+      this.events.off("update", follow);
+      t.destroy();
+    });
   }
 
   // Quest stations: a glowing pad with an icon. Mine get a bouncing "!".

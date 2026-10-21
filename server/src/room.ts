@@ -432,7 +432,9 @@ export class Room {
   chat(id: string, phrase: number, target?: string) {
     const p = this.players.get(id);
     const now = Date.now();
-    if (this.phase !== "meeting" || !p || now < p.nextChatAt) return;
+    if (!p || now < p.nextChatAt) return;
+    // Meetings: everyone. During the round: ghosts only (to each other).
+    if (this.phase !== "meeting" && !(this.phase === "playing" && !p.alive)) return;
     const text = quickchat.phrases[phrase];
     if (typeof text !== "string") return;
     const needsTarget = text.includes("{player}");

@@ -32,7 +32,7 @@
 - Single, final vote, anonymous (only totals are shown). Tie or "skip" majority = no one is ejected.
 - Ejected player's role not revealed by default (`meeting.revealRoleOnEject`).
 - After a meeting: bodies removed, everyone brought back to the center, kill cooldown restarted.
-- Ghosts: chat among themselves during meetings only (in-game ghost chat comes in Phase 2).
+- Ghosts: chat among themselves during meetings and, since 2026-10-21, during the round too (same quick chat, 💬 button, bubbles over ghosts + short log). Only ghosts receive it (filtered server-side); the living never get the message.
 - Reconnection: secret token per player, 30 s grace (`reconnectGrace`) before being removed. Player shown as "offline" in the meantime.
 - Server unreachable: the client retries forever (1 s, 2 s, 4 s, then every 5 s). Create/Join waits up to 10 s, then shows the error. In game, actions sent during an outage are dropped.
 - You can join a room in the lobby or after a game ends (not during).
@@ -85,3 +85,4 @@
 - 2026-10-21: special roles and powers (DJ, Teleporter, Medic, Prankster, Gambler, Sacrifice, Canadian, Jester, Vulture, Blackout, Shapeshifter, Swapper, Prop Master). `test:powers` test.
 - 2026-10-21: game loop: rounds + game clock, quests and shared bar, emergency button, pick 1 of 2 roles, ghost tasks weight revival. `test:loop` test.
 - 2026-10-21: task mini-games (8: tune, rocks, fish, defrost, servers, whack, lollipop, cake).
+- 2026-10-21: in-game ghost chat.
