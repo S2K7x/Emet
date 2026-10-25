@@ -28,7 +28,7 @@
 
 ## Phase 5: polish and content
 - [ ] 6 to 8 more roles
-- [ ] Game settings
+- [x] Game settings (host, in the lobby: `hostSettings` in `data/game.json`)
 - [ ] Voice, matchmaking, mobile
 
 ## Criteria for moving between phases

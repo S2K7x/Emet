@@ -37,6 +37,7 @@
 - Reconnection: secret token per player, 30 s grace (`reconnectGrace`) before being removed. Player shown as "offline" in the meantime.
 - Leaving mid-game (grace expired): the player is removed, no body, no bot. Their unfinished tasks leave the bar, victory is rechecked (a killer leaving can hand the innocents the win). Everyone gets a "👋 X left the game" banner; role hidden by default (`leave.revealRole`).
 - Portals (Phase 4): the doors stay, and 2 portal pairs link opposite zones diagonally (Moon ↔ Candy, Ice ↔ Neon), `portals` in `map.json`. Stand still on a portal for `portal.channel` s (1 s) to warp to its pair, then `portal.cooldown` s (8 s) before warping again. Moving cancels. Players who can see the portal see you channeling (🌌 badge) and a "warp" effect at both ends (vision rules apply, so it never leaks positions). Ghosts can use them too, silently. Settings in `data/game.json`.
+- Game settings (Phase 5, 2026-10-25): in the room lobby (and on the end screen) the host tunes the main numbers with − / + buttons; other players see them read-only. Which settings, their limits and steps are data (`hostSettings` in `game.json`); defaults are the values already in `game.json`. Server-side: each room has its own copy of the config, values are validated (known id, clamped, snapped to the step, host only, never during a game). Killers: 0 = auto (`killers.byPlayers`), and never more than (players − 1) / 2.
 - Meeting place: when a meeting starts, the living are seated around the Nexus table (one fixed seat each, the spawn ellipse) and stay there; the meeting panel is see-through so the circle shows behind it. After the meeting everyone leaves from their seat (no extra teleport). Ghosts stay where they were.
 - Server unreachable: the client retries forever (1 s, 2 s, 4 s, then every 5 s). Create/Join waits up to 10 s, then shows the error. In game, actions sent during an outage are dropped.
 - You can join a room in the lobby or after a game ends (not during).
@@ -104,3 +105,4 @@
 - 2026-10-25: leaving mid-game: removed without a body after the grace, banner to everyone, victory rechecked (option A, no bot).
 - 2026-10-25: portals (2 diagonal pairs, 1 s channel, 8 s cooldown) and seats around the Nexus table during meetings.
 - 2026-10-25: Cop role (tie the 2 closest players, witness on a kill).
+- 2026-10-25: host game settings in the lobby (killers, kill cooldown, round/game time, tasks, discussion/vote time, emergencies, reveal role on eject).

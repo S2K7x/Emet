@@ -11,6 +11,7 @@ import { Minimap } from "./Minimap.ts";
 import { MiniGame } from "./MiniGames.ts";
 import { GhostChat } from "./GhostChat.ts";
 import { RevealCard } from "./RevealCard.ts";
+import { SettingsPanel } from "./SettingsPanel.ts";
 import config from "../../data/game.json";
 import powers from "../../data/powers.json";
 
@@ -66,6 +67,7 @@ export class GameScene extends Phaser.Scene {
   private meetingUi: MeetingUi;
   private ghostChat: GhostChat;
   private revealCard: RevealCard;
+  private settingsPanel: SettingsPanel;
   private lastPhase?: string;
   private minimap = new Minimap(map.data);
   private ropes!: Phaser.GameObjects.Graphics; // Cop ropes between tied players
@@ -75,6 +77,7 @@ export class GameScene extends Phaser.Scene {
     this.meetingUi = new MeetingUi(net, joined.you);
     this.ghostChat = new GhostChat(net);
     this.revealCard = new RevealCard(net, joined.you, joined.code);
+    this.settingsPanel = new SettingsPanel(net, joined.you);
   }
 
   create() {
@@ -498,6 +501,7 @@ export class GameScene extends Phaser.Scene {
       role.style.display = "none";
     }
     this.revealCard.update(s);
+    this.settingsPanel.update(s);
 
     const kill = $("kill") as HTMLButtonElement;
     const canKill = s.phase === "playing" && s.you.role === "killer" && s.you.alive;

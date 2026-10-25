@@ -116,6 +116,8 @@ wss.on("connection", (socket) => {
       id = rejoined;
     } else if (msg.t === "input" && room) {
       room.setInput(id, msg.dx, msg.dy);
+    } else if (msg.t === "setting" && room) {
+      room.setting(id, msg.id, msg.value);
     } else if (msg.t === "start" && room) {
       room.start(id);
     } else if (msg.t === "power" && room) {

@@ -2,6 +2,7 @@ import type { WebSocket } from "ws";
 import type { BodyView, ItemView, Look, Role, ServerMsg } from "../../shared/protocol.ts";
 import config from "../../data/game.json" with { type: "json" };
 import skins from "../../data/skins.json" with { type: "json" };
+import type { GameConfig } from "../../shared/settings.ts";
 
 export interface Player {
   id: string;
@@ -49,9 +50,11 @@ export function send(socket: WebSocket, msg: ServerMsg) {
   if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg));
 }
 
-export function killersFor(count: number) {
-  const table = config.killers.byPlayers as Record<string, number>;
-  return table[String(count)] ?? Math.max(1, Math.floor(count / 4));
+// killers.count set by the host (0 = auto from the table), never more than (players - 1) / 2.
+export function killersFor(count: number, cfg: GameConfig = config) {
+  const table = cfg.killers.byPlayers as Record<string, number>;
+  const wanted = cfg.killers.count || (table[String(count)] ?? Math.max(1, Math.floor(count / 4)));
+  return Math.max(1, Math.min(wanted, Math.floor((count - 1) / 2)));
 }
 
 export function shuffle<T>(arr: T[]) {

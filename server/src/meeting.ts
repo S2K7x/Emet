@@ -12,8 +12,14 @@ export class Meeting {
   result?: MeetingResult;
   private votes = new Map<string, string>();
 
-  constructor(readonly reporter: string, readonly body: string, now: number, readonly kind: MeetingKind = "report") {
-    this.endsAt = now + config.meeting.discussion * 1000;
+  constructor(
+    readonly reporter: string,
+    readonly body: string,
+    now: number,
+    readonly kind: MeetingKind = "report",
+    private timing = config.meeting, // the room's settings
+  ) {
+    this.endsAt = now + timing.discussion * 1000;
   }
 
   // A vote is only accepted during the vote stage, once, from a living player, for a living player or SKIP.
@@ -30,11 +36,11 @@ export class Meeting {
 
     if (this.stage === "discussion") {
       this.stage = "vote";
-      this.endsAt = now + config.meeting.vote * 1000;
+      this.endsAt = now + this.timing.vote * 1000;
     } else if (this.stage === "vote") {
       this.result = this.count(alive);
       this.stage = "result";
-      this.endsAt = now + config.meeting.result * 1000;
+      this.endsAt = now + this.timing.result * 1000;
     } else {
       return true;
     }
@@ -70,7 +76,7 @@ export class Meeting {
       result: this.result && {
         ejected,
         tally: this.result.tally,
-        ejectedRole: ejected && config.meeting.revealRoleOnEject ? roleOf(ejected) : undefined,
+        ejectedRole: ejected && this.timing.revealRoleOnEject ? roleOf(ejected) : undefined,
       },
     };
   }

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { WebSocket } from "ws";
 import type { ChatLine, MeetingKind, Phase, ServerMsg, Winner } from "../../shared/protocol.ts";
-import config from "../../data/game.json" with { type: "json" };
 import quickchat from "../../data/quickchat.json" with { type: "json" };
 import minigames from "../../data/minigames.json" with { type: "json" };
 import { Meeting } from "./meeting.ts";
+import { cleanSetting, configWith, defaultSettings, type Settings } from "../../shared/settings.ts";
 import { isMoving, map, move } from "./movement.ts";
 import { cleanLook, killersFor, send, shuffle, type Body, type Item, type Player } from "./player.ts";
 import { canSee, youFor, viewFor, type Sight } from "./visibility.ts";
@@ -26,6 +26,8 @@ export class Room {
   private taskTotal = 0;
   private nextId = 0;
   private phase: Phase = "lobby";
+  private settings: Settings = defaultSettings();
+  private cfg = configWith(this.settings); // this room's config: game.json + the host's settings
   private host = "";
   private winner?: Winner;
   private meeting?: Meeting;
@@ -33,18 +35,18 @@ export class Room {
   private lastTick = Date.now();
 
   constructor(readonly code: string, private onEmpty: () => void) {
-    this.timer = setInterval(() => this.tick(), 1000 / config.tickRate);
+    this.timer = setInterval(() => this.tick(), 1000 / this.cfg.tickRate);
   }
 
   get canJoin(): string | undefined {
     if (this.phase === "playing" || this.phase === "meeting") return "Game already in progress";
-    if (this.players.size >= config.maxPlayers) return "Room is full";
+    if (this.players.size >= this.cfg.maxPlayers) return "Room is full";
   }
 
   add(id: string, name: string, look: unknown, socket: WebSocket) {
     const used = new Set([...this.players.values()].map((p) => p.color));
-    const color = config.colors.find((c) => !used.has(c)) ?? config.colors[0];
-    const spot = map.spawnPoint(this.players.size, config.maxPlayers);
+    const color = this.cfg.colors.find((c) => !used.has(c)) ?? this.cfg.colors[0];
+    const spot = map.spawnPoint(this.players.size, this.cfg.maxPlayers);
     this.players.set(id, {
       id,
       name: name.slice(0, 16) || "Player",
@@ -92,7 +94,7 @@ export class Room {
   disconnect(id: string, socket: WebSocket) {
     const p = this.players.get(id);
     if (!p || p.socket !== socket) return; // already reconnected on another socket
-    p.awayUntil = Date.now() + config.reconnectGrace * 1000;
+    p.awayUntil = Date.now() + this.cfg.reconnectGrace * 1000;
     p.input = { dx: 0, dy: 0 };
   }
 
@@ -103,10 +105,10 @@ export class Room {
       you: p.id,
       token: p.token,
       map: { width: map.data.width, height: map.data.height },
-      radius: config.player.radius,
-      killRange: config.kill.range,
-      reportRange: config.report.range,
-      minPlayers: config.minPlayers,
+      radius: this.cfg.player.radius,
+      killRange: this.cfg.kill.range,
+      reportRange: this.cfg.report.range,
+      minPlayers: this.cfg.minPlayers,
     });
   }
 
@@ -122,12 +124,21 @@ export class Room {
     this.meeting?.forget(id);
     // Left mid-game: no body, no bot, just a banner (role hidden unless `leave.revealRole`).
     if (gone && this.phase !== "lobby" && this.phase !== "ended") {
-      this.fx("banner", undefined, `👋 ${gone.name} left the game${config.leave.revealRole ? ` (${gone.role})` : ""}`);
+      this.fx("banner", undefined, `👋 ${gone.name} left the game${this.cfg.leave.revealRole ? ` (${gone.role})` : ""}`);
     }
     // Their unfinished tasks no longer block the bar.
     if (gone?.role === "innocent") this.taskTotal -= gone.tasks.filter((t) => !t.done).length;
     this.checkTaskBar();
     this.checkVictory();
+  }
+
+  // Host only, between games. The value is untrusted: cleaned against hostSettings.
+  setting(id: string, key: string, value: unknown) {
+    if (id !== this.host || (this.phase !== "lobby" && this.phase !== "ended")) return;
+    const v = cleanSetting(key, value);
+    if (v === undefined) return;
+    this.settings = { ...this.settings, [key]: v };
+    this.cfg = configWith(this.settings);
   }
 
   setInput(id: string, dx: number, dy: number) {
@@ -139,31 +150,31 @@ export class Room {
   }
 
   start(id: string) {
-    if (id !== this.host || (this.phase !== "lobby" && this.phase !== "ended") || this.players.size < config.minPlayers) return;
+    if (id !== this.host || (this.phase !== "lobby" && this.phase !== "ended") || this.players.size < this.cfg.minPlayers) return;
 
     // Roles are drawn server-side only.
     const all = shuffle([...this.players.values()]);
-    const killerCount = killersFor(all.length);
+    const killerCount = killersFor(all.length, this.cfg);
     const now = Date.now();
     all.forEach((p, i) => {
       p.role = i < killerCount ? "killer" : "innocent";
       p.alive = true;
       p.ejected = false;
-      p.nextKillAt = now + config.kill.initialCooldown * 1000;
-      p.emergencies = config.emergency.perPlayer;
+      p.nextKillAt = now + this.cfg.kill.initialCooldown * 1000;
+      p.emergencies = this.cfg.emergency.perPlayer;
       p.working = undefined;
       p.warp = undefined;
       p.nextWarpAt = 0;
       p.tether = undefined;
       p.ghostTasks = 0;
       // Everyone gets tasks (killers and neutrals: fake ones, as cover).
-      p.tasks = shuffle(map.data.stations.map((st) => st.id)).slice(0, config.tasks.perPlayer).map((station) => ({ station, done: false }));
+      p.tasks = shuffle(map.data.stations.map((st) => st.id)).slice(0, this.cfg.tasks.perPlayer).map((station) => ({ station, done: false }));
     });
     this.dealRoles(all.slice(killerCount), all.slice(0, killerCount), now);
     this.taskDone = 0;
-    this.taskTotal = all.filter((p) => p.role === "innocent").length * config.tasks.perPlayer;
+    this.taskTotal = all.filter((p) => p.role === "innocent").length * this.cfg.tasks.perPlayer;
     this.playMs = this.roundStartMs = 0;
-    this.choiceUntil = now + config.roles.choiceTime * 1000;
+    this.choiceUntil = now + this.cfg.roles.choiceTime * 1000;
     this.bodies = [];
     this.items = [];
     this.timers = [];
@@ -177,7 +188,7 @@ export class Room {
   report(id: string) {
     const p = this.players.get(id);
     if (this.phase !== "playing" || !p?.alive) return;
-    const body = this.bodies.find((b) => map.reachable(p.x, p.y, b.x, b.y, config.report.range));
+    const body = this.bodies.find((b) => map.reachable(p.x, p.y, b.x, b.y, this.cfg.report.range));
     if (!body) return;
     this.startMeeting(id, body.victim);
   }
@@ -186,7 +197,7 @@ export class Room {
   emergency(id: string) {
     const p = this.players.get(id);
     const at = map.data.emergency;
-    if (this.phase !== "playing" || !p?.alive || p.emergencies <= 0 || Math.hypot(p.x - at.x, p.y - at.y) > config.emergency.range) return; // the table itself blocks sight: distance only
+    if (this.phase !== "playing" || !p?.alive || p.emergencies <= 0 || Math.hypot(p.x - at.x, p.y - at.y) > this.cfg.emergency.range) return; // the table itself blocks sight: distance only
     p.emergencies--;
     this.fx("banner", undefined, "🚨 Emergency meeting!");
     this.startMeeting(id, "", "emergency");
@@ -197,7 +208,7 @@ export class Room {
     const p = this.players.get(id);
     if (this.phase !== "playing" || !p || p.working) return;
     const st = map.data.stations.find(
-      (s) => p.tasks.some((t) => t.station === s.id && !t.done) && map.reachable(p.x, p.y, s.x, s.y, config.tasks.range),
+      (s) => p.tasks.some((t) => t.station === s.id && !t.done) && map.reachable(p.x, p.y, s.x, s.y, this.cfg.tasks.range),
     );
     if (st) p.working = { station: st.id, seconds: 0 };
   }
@@ -205,7 +216,7 @@ export class Room {
   private updateWork(p: Player, dt: number, moved: boolean) {
     if (!p.working) return;
     const st = map.data.stations.find((s) => s.id === p.working!.station)!;
-    if (moved || !map.reachable(p.x, p.y, st.x, st.y, config.tasks.range)) {
+    if (moved || !map.reachable(p.x, p.y, st.x, st.y, this.cfg.tasks.range)) {
       p.working = undefined;
       return;
     }
@@ -248,7 +259,7 @@ export class Room {
   // body = "" for an emergency or end-of-round meeting.
   private startMeeting(reporter: string, body: string, kind: MeetingKind = "report") {
     this.phase = "meeting";
-    this.meeting = new Meeting(reporter, body, Date.now(), kind);
+    this.meeting = new Meeting(reporter, body, Date.now(), kind, this.cfg.meeting);
     this.lightsOutUntil = 0;
     for (const q of this.players.values()) {
       q.input = { dx: 0, dy: 0 };
@@ -281,7 +292,7 @@ export class Room {
       const deck = shuffle([...ids]); // first offers (the defaults) are all different while the pool lasts
       players.forEach((p, i) => {
         const offer = deck.length ? [deck[i % deck.length]] : [];
-        for (const id of shuffle(ids.filter((id) => id !== offer[0])).slice(0, config.roles.choices - 1)) offer.push(id);
+        for (const id of shuffle(ids.filter((id) => id !== offer[0])).slice(0, this.cfg.roles.choices - 1)) offer.push(id);
         p.offer = offer.length > 1 ? offer : undefined;
         this.giveRole(p, offer[0], now);
       });
@@ -354,7 +365,7 @@ export class Room {
     const msg: ServerMsg = { t: "fx", kind, text, x: at && Math.round(at.x), y: at && Math.round(at.y) };
     const now = Date.now();
     for (const q of this.players.values()) {
-      if (at && (Math.hypot(at.x - q.x, at.y - q.y) > config.fx.range || !this.canSee(q, at, now))) continue;
+      if (at && (Math.hypot(at.x - q.x, at.y - q.y) > this.cfg.fx.range || !this.canSee(q, at, now))) continue;
       send(q.socket, msg);
     }
   }
@@ -430,7 +441,7 @@ export class Room {
     if (typeof text !== "string") return;
     const needsTarget = text.includes("{player}");
     if (needsTarget && !(target && this.players.has(target))) return;
-    p.nextChatAt = now + config.chat.minInterval * 1000;
+    p.nextChatAt = now + this.cfg.chat.minInterval * 1000;
 
     // The living are heard by everyone; ghosts only by each other.
     const line: ChatLine = { from: id, phrase, target: needsTarget ? target : undefined, ghost: !p.alive };
@@ -471,7 +482,7 @@ export class Room {
     if (ejected && ejected.roleId === "jester") return this.end("jester");
     for (const p of this.players.values()) {
       p.input = { dx: 0, dy: 0 };
-      p.nextKillAt = now + config.kill.cooldown * 1000;
+      p.nextKillAt = now + this.cfg.kill.cooldown * 1000;
     }
     this.checkVictory();
   }
@@ -488,7 +499,7 @@ export class Room {
     for (const p of this.players.values()) {
       if (!p.alive || p.role === "killer") continue;
       const d = Math.hypot(p.x - killer.x, p.y - killer.y);
-      const range = config.kill.range * (map.ruleAt(p.x, p.y)?.killRange ?? 1);
+      const range = this.cfg.kill.range * (map.ruleAt(p.x, p.y)?.killRange ?? 1);
       if (d <= range && d < best && !map.blocked(killer.x, killer.y, p.x, p.y)) {
         best = d;
         target = p;
@@ -498,12 +509,12 @@ export class Room {
 
     // Zone rule: a killer on ice can slip and miss.
     if (Math.random() < (map.ruleAt(killer.x, killer.y)?.killMiss ?? 0)) {
-      killer.nextKillAt = now + config.kill.missCooldown * 1000;
+      killer.nextKillAt = now + this.cfg.kill.missCooldown * 1000;
       this.fx("whiff", killer);
       return;
     }
 
-    killer.nextKillAt = now + config.kill.cooldown * 1000;
+    killer.nextKillAt = now + this.cfg.kill.cooldown * 1000;
     if (target.shieldUntil > now) {
       // Medic bubble: the kill is wasted, everyone nearby sees it pop.
       target.shieldUntil = 0;
@@ -581,21 +592,22 @@ export class Room {
         clock: this.phase === "playing" || this.phase === "meeting" ? this.clock() : undefined,
         taskBar: this.phase === "lobby" || this.taskTotal <= 0 ? undefined : Math.min(1, this.taskDone / this.taskTotal),
         winner: this.winner,
+        settings: this.phase === "lobby" || this.phase === "ended" ? this.settings : undefined,
       });
     }
   }
 
   // Portals: stand still on one for `portal.channel` s to warp to its pair (still sliding on ice = moving).
   private updateWarp(p: Player, dt: number, now: number, moving: boolean) {
-    const portal = !moving && !p.tether && now >= p.nextWarpAt ? map.portalAt(p.x, p.y, config.portal.radius) : undefined;
+    const portal = !moving && !p.tether && now >= p.nextWarpAt ? map.portalAt(p.x, p.y, this.cfg.portal.radius) : undefined;
     if (!portal) return void (p.warp = undefined);
     if (p.warp?.portal !== portal.id) p.warp = { portal: portal.id, seconds: 0 };
     p.warp.seconds += dt;
-    if (p.warp.seconds < config.portal.channel) return;
+    if (p.warp.seconds < this.cfg.portal.channel) return;
     p.warp = undefined;
     const exit = map.data.portals?.find((q) => q.id === portal.pair);
     if (!exit) return;
-    p.nextWarpAt = now + config.portal.cooldown * 1000;
+    p.nextWarpAt = now + this.cfg.portal.cooldown * 1000;
     p.working = undefined;
     if (p.alive) this.fx("warp", p); // ghosts warp silently
     ({ x: p.x, y: p.y } = exit);
@@ -623,8 +635,8 @@ export class Room {
       const pull = (d - p.tether.rope) / 2 / d;
       const dx = (q.x - p.x) * pull;
       const dy = (q.y - p.y) * pull;
-      ({ x: p.x, y: p.y } = map.collide(p.x + dx, p.y + dy, config.player.radius));
-      ({ x: q.x, y: q.y } = map.collide(q.x - dx, q.y - dy, config.player.radius));
+      ({ x: p.x, y: p.y } = map.collide(p.x + dx, p.y + dy, this.cfg.player.radius));
+      ({ x: q.x, y: q.y } = map.collide(q.x - dx, q.y - dy, this.cfg.player.radius));
     }
   }
 
@@ -637,24 +649,24 @@ export class Room {
   // Game clock: a round ends in a meeting, the clock running out = killers win.
   private updateClock(dt: number) {
     this.playMs += dt * 1000;
-    if (this.playMs >= config.time.total * 1000) {
+    if (this.playMs >= this.cfg.time.total * 1000) {
       this.fx("banner", undefined, "⏰ Time's up!");
       return this.end("killer");
     }
-    if (this.playMs - this.roundStartMs >= config.time.round * 1000) {
+    if (this.playMs - this.roundStartMs >= this.cfg.time.round * 1000) {
       this.fx("banner", undefined, "⏰ Round over: time to vote!");
       this.startMeeting("", "", "round");
     }
   }
 
   private clock() {
-    const total = config.time.total * 1000 - this.playMs;
-    const round = Math.min(total, config.time.round * 1000 - (this.playMs - this.roundStartMs));
+    const total = this.cfg.time.total * 1000 - this.playMs;
+    const round = Math.min(total, this.cfg.time.round * 1000 - (this.playMs - this.roundStartMs));
     return { round: Math.max(0, Math.ceil(round / 1000)), total: Math.max(0, Math.ceil(total / 1000)) };
   }
 
   private checkBanana(p: Player, now: number) {
-    const hit = this.items.find((it) => it.kind === "banana" && now >= it.armedAt && Math.hypot(it.x - p.x, it.y - p.y) < config.player.radius + 12);
+    const hit = this.items.find((it) => it.kind === "banana" && now >= it.armedAt && Math.hypot(it.x - p.x, it.y - p.y) < this.cfg.player.radius + 12);
     if (!hit) return;
     this.items = this.items.filter((it) => it !== hit);
     const moving = Math.hypot(p.input.dx, p.input.dy) > 0.1;

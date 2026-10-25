@@ -4,6 +4,7 @@ import { afterEach, describe, it } from "node:test";
 import type { WebSocket } from "ws";
 import { SKIP, type ServerMsg } from "../../shared/protocol.ts";
 import { Meeting } from "../src/meeting.ts";
+import { cleanSetting } from "../../shared/settings.ts";
 import { Room } from "../src/room.ts";
 import config from "../../data/game.json" with { type: "json" };
 import mapData from "../../data/map.json" with { type: "json" };
@@ -252,6 +253,64 @@ describe("Cop", () => {
     r.updateTethers(Date.now());
     assert.equal(a.tether, undefined);
     assert.equal(b.tether, undefined);
+  });
+});
+
+describe("Host settings", () => {
+  function lobby(n: number) {
+    const room = new Room("T", () => {});
+    rooms.push(room);
+    const sockets = Array.from({ length: n }, (_, i) => {
+      const s = fakeSocket();
+      room.add(`p${i}`, `P${i}`, undefined, s as unknown as WebSocket);
+      return s;
+    });
+    return { room, r: room as any, sockets };
+  }
+
+  it("cleans untrusted values: unknown id, clamp, step, booleans", () => {
+    assert.equal(cleanSetting("nope", 3), undefined);
+    assert.equal(cleanSetting("killCooldown", "20" as unknown), undefined);
+    assert.equal(cleanSetting("killCooldown", 999), 60);
+    assert.equal(cleanSetting("killCooldown", 22), 20);
+    assert.equal(cleanSetting("revealRole", 5), 1);
+  });
+
+  it("only the host, only between games", () => {
+    const { room, r } = lobby(4);
+    room.setting("p1", "killCooldown", 40);
+    assert.equal(r.cfg.kill.cooldown, config.kill.cooldown, "non-host changed a setting");
+    room.setting("p0", "killCooldown", 40);
+    assert.equal(r.cfg.kill.cooldown, 40);
+    room.start("p0");
+    room.setting("p0", "killCooldown", 10);
+    assert.equal(r.cfg.kill.cooldown, 40, "changed during a game");
+  });
+
+  it("settings drive the game: killers, tasks, meeting times, and are sent in the lobby only", () => {
+    const { room, r, sockets } = lobby(7);
+    room.setting("p0", "killers", 3);
+    room.setting("p0", "tasks", 5);
+    room.setting("p0", "discussion", 30);
+    r.tick();
+    const snap = [...sockets[1].sent].reverse().find((m) => m.t === "snapshot") as any;
+    assert.equal(snap.settings.killers, 3);
+    room.start("p0");
+    const all = [...room.players.values()] as any[];
+    assert.equal(all.filter((p) => p.role === "killer").length, 3);
+    assert.ok(all.every((p) => p.tasks.length === 5));
+    r.startMeeting("", "", "emergency");
+    assert.ok(Math.abs(r.meeting.endsAt - Date.now() - 30_000) < 100);
+    sockets[1].sent = [];
+    r.tick();
+    assert.equal(([...sockets[1].sent].reverse().find((m) => m.t === "snapshot") as any).settings, undefined);
+  });
+
+  it("never more killers than (players - 1) / 2", () => {
+    const { room } = lobby(5);
+    room.setting("p0", "killers", 3);
+    room.start("p0");
+    assert.equal([...room.players.values()].filter((p: any) => p.role === "killer").length, 2);
   });
 });
 

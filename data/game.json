@@ -1,4 +1,15 @@
 {
+  "hostSettings": [
+    { "id": "killers", "label": "Killers", "path": "killers.count", "min": 0, "max": 3, "step": 1, "zero": "Auto" },
+    { "id": "killCooldown", "label": "Kill cooldown", "unit": "s", "path": "kill.cooldown", "min": 10, "max": 60, "step": 5 },
+    { "id": "round", "label": "Round", "unit": "s", "path": "time.round", "min": 60, "max": 240, "step": 15 },
+    { "id": "total", "label": "Game", "unit": "s", "path": "time.total", "min": 180, "max": 900, "step": 30 },
+    { "id": "tasks", "label": "Tasks each", "path": "tasks.perPlayer", "min": 1, "max": 6, "step": 1 },
+    { "id": "emergencies", "label": "Emergencies each", "path": "emergency.perPlayer", "min": 0, "max": 3, "step": 1 },
+    { "id": "discussion", "label": "Discussion", "unit": "s", "path": "meeting.discussion", "min": 0, "max": 90, "step": 5 },
+    { "id": "vote", "label": "Vote", "unit": "s", "path": "meeting.vote", "min": 15, "max": 120, "step": 5 },
+    { "id": "revealRole", "label": "Reveal role on eject", "path": "meeting.revealRoleOnEject", "bool": true }
+  ],
   "tickRate": 20,
   "server": {
     "maxRooms": 200,
@@ -29,6 +40,7 @@
     "missCooldown": 3
   },
   "killers": {
+    "count": 0,
     "byPlayers": {
       "4": 1,
       "5": 1,

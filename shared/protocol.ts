@@ -17,6 +17,7 @@ export type ClientMsg =
   | { t: "rejoin"; code: string; token: string }
   | { t: "input"; dx: number; dy: number }
   | { t: "start" }
+  | { t: "setting"; id: string; value: number } // host, in the lobby (hostSettings in game.json)
   | { t: "kill" }
   | { t: "power" }
   | { t: "task" } // start the mini-game at the station you're standing at
@@ -133,6 +134,7 @@ export type ServerMsg =
       taskBar?: number; // 0..1, shared quest bar
       meeting?: MeetingView;
       winner?: Winner;
+      settings?: Record<string, number>; // lobby and end screen only (hostSettings ids)
     }
   // One-off visual effect, shown to everyone (or only those who can see that spot).
   | { t: "fx"; kind: string; x?: number; y?: number; text?: string }
