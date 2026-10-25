@@ -1,5 +1,5 @@
 // Zone rules test: sugar rush speed, ice/moon inertia, dark zone vision. Requires the server: npm run dev:server
-// Takes ~25 s.
+// Takes ~50 s.
 import WebSocket from "ws";
 import mapData from "../../data/map.json" with { type: "json" };
 
@@ -27,13 +27,22 @@ const until = async (cond) => {
 };
 const me = (b) => b.snap.players.find((p) => p.id === b.id);
 
+// Steer toward the target and brake against the slide (Ice, Moon keep you sliding), or we'd orbit it.
 async function walk(b, x, y) {
+  let last = { ...me(b) };
+  let lastAt = Date.now();
   for (let i = 0; i < 150; i++) {
     const p = me(b);
+    const now = Date.now();
+    const dt = Math.max(0.001, (now - lastAt) / 1000);
+    const vx = (p.x - last.x) / dt;
+    const vy = (p.y - last.y) / dt;
+    last = { ...p };
+    lastAt = now;
     const dx = x - p.x;
     const dy = y - p.y;
     if (Math.hypot(dx, dy) < 10) break;
-    b.send({ t: "input", dx, dy });
+    b.send({ t: "input", dx: dx / 40 - vx / 250, dy: dy / 40 - vy / 250 });
     await sleep(50);
   }
   b.send({ t: "input", dx: 0, dy: 0 });
