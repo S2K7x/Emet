@@ -57,6 +57,11 @@
     "minInterval": 1
   },
   "reconnectGrace": 30,
+  "portal": {
+    "radius": 40,
+    "channel": 1,
+    "cooldown": 8
+  },
   "leave": {
     "revealRole": false
   },

@@ -72,6 +72,7 @@ export class Room {
       tasks: [],
       ghostTasks: 0,
       emergencies: 0,
+      nextWarpAt: 0,
     });
     if (!this.host) this.host = id;
     this.sendJoined(this.players.get(id)!);
@@ -151,6 +152,8 @@ export class Room {
       p.nextKillAt = now + config.kill.initialCooldown * 1000;
       p.emergencies = config.emergency.perPlayer;
       p.working = undefined;
+      p.warp = undefined;
+      p.nextWarpAt = 0;
       p.ghostTasks = 0;
       // Everyone gets tasks (killers and neutrals: fake ones, as cover).
       p.tasks = shuffle(map.data.stations.map((st) => st.id)).slice(0, config.tasks.perPlayer).map((station) => ({ station, done: false }));
@@ -253,7 +256,13 @@ export class Room {
       q.offer = undefined;
       q.danceUntil = q.djUntil = q.slipUntil = 0;
       q.disguise = undefined;
+      q.warp = undefined;
     }
+    // Meeting place: the living sit around the Nexus table, one fixed seat each (the dead leave an empty seat).
+    const all = [...this.players.values()];
+    all.forEach((q, i) => {
+      if (q.alive) ({ x: q.x, y: q.y } = map.spawnPoint(i, all.length));
+    });
   }
 
   // Innocents and killers are offered a few roles (all different while the pool lasts); maybe one innocent becomes a neutral.
@@ -443,7 +452,7 @@ export class Room {
     }
     if (!done) return;
 
-    // Back to the game: bodies removed, everyone to the center, cooldowns restarted.
+    // Back to the game from the seats: bodies removed, cooldowns restarted.
     this.meeting = undefined;
     this.bodies = [];
     this.items = [];
@@ -451,12 +460,10 @@ export class Room {
     this.roundStartMs = this.playMs; // every meeting starts a new round
     // Jester: getting voted out was the plan all along.
     if (ejected && ejected.roleId === "jester") return this.end("jester");
-    const all = [...this.players.values()];
-    all.forEach((p, i) => {
-      ({ x: p.x, y: p.y } = map.spawnPoint(i, all.length));
+    for (const p of this.players.values()) {
       p.input = { dx: 0, dy: 0 };
       p.nextKillAt = now + config.kill.cooldown * 1000;
-    });
+    }
     this.checkVictory();
   }
 
@@ -537,8 +544,10 @@ export class Room {
         this.updateWork(p, dt, false); // DJ: dancing on the spot (tasks still progress)
         continue;
       }
-      this.updateWork(p, dt, isMoving(p, now));
+      const moving = isMoving(p, now);
+      this.updateWork(p, dt, moving);
       move(p, dt, now);
+      if (this.phase === "playing") this.updateWarp(p, dt, now, moving || Math.hypot(p.vel.x, p.vel.y) > 20);
       if (p.alive && now >= p.slipUntil && this.phase === "playing") this.checkBanana(p, now);
     }
 
@@ -559,6 +568,24 @@ export class Room {
         winner: this.winner,
       });
     }
+  }
+
+  // Portals: stand still on one for `portal.channel` s to warp to its pair (still sliding on ice = moving).
+  private updateWarp(p: Player, dt: number, now: number, moving: boolean) {
+    const portal = !moving && now >= p.nextWarpAt ? map.portalAt(p.x, p.y, config.portal.radius) : undefined;
+    if (!portal) return void (p.warp = undefined);
+    if (p.warp?.portal !== portal.id) p.warp = { portal: portal.id, seconds: 0 };
+    p.warp.seconds += dt;
+    if (p.warp.seconds < config.portal.channel) return;
+    p.warp = undefined;
+    const exit = map.data.portals?.find((q) => q.id === portal.pair);
+    if (!exit) return;
+    p.nextWarpAt = now + config.portal.cooldown * 1000;
+    p.working = undefined;
+    if (p.alive) this.fx("warp", p); // ghosts warp silently
+    ({ x: p.x, y: p.y } = exit);
+    p.vel = { x: 0, y: 0 };
+    if (p.alive) this.fx("warp", p);
   }
 
   // Game clock: a round ends in a meeting, the clock running out = killers win.

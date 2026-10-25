@@ -37,6 +37,8 @@ export interface Player {
   working?: { station: string; seconds: number };
   ghostTasks: number; // tasks done as a ghost: weights revival
   emergencies: number;
+  warp?: { portal: string; seconds: number }; // standing still on a portal
+  nextWarpAt: number; // timestamp ms
 }
 
 export type Body = BodyView & { fake?: boolean };

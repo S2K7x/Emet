@@ -35,6 +35,8 @@
 - Ghosts: chat among themselves during meetings and, since 2026-10-21, during the round too (same quick chat, 💬 button, bubbles over ghosts + short log). Only ghosts receive it (filtered server-side); the living never get the message.
 - Reconnection: secret token per player, 30 s grace (`reconnectGrace`) before being removed. Player shown as "offline" in the meantime.
 - Leaving mid-game (grace expired): the player is removed, no body, no bot. Their unfinished tasks leave the bar, victory is rechecked (a killer leaving can hand the innocents the win). Everyone gets a "👋 X left the game" banner; role hidden by default (`leave.revealRole`).
+- Portals (Phase 4): the doors stay, and 2 portal pairs link opposite zones diagonally (Moon ↔ Candy, Ice ↔ Neon), `portals` in `map.json`. Stand still on a portal for `portal.channel` s (1 s) to warp to its pair, then `portal.cooldown` s (8 s) before warping again. Moving cancels. Players who can see the portal see you channeling (🌌 badge) and a "warp" effect at both ends (vision rules apply, so it never leaks positions). Ghosts can use them too, silently. Settings in `data/game.json`.
+- Meeting place: when a meeting starts, the living are seated around the Nexus table (one fixed seat each, the spawn ellipse) and stay there; the meeting panel is see-through so the circle shows behind it. After the meeting everyone leaves from their seat (no extra teleport). Ghosts stay where they were.
 - Server unreachable: the client retries forever (1 s, 2 s, 4 s, then every 5 s). Create/Join waits up to 10 s, then shows the error. In game, actions sent during an outage are dropped.
 - You can join a room in the lobby or after a game ends (not during).
 - Game language: **English** (all player-facing text: UI, roles, quick chat, zone names, server errors). Design docs are in English too.
@@ -99,3 +101,4 @@
 - 2026-10-24: positional effects (`fx` with x/y: whiff, pop, poof, zap…) are only sent to players who can see the spot (vision rules + `fx.range` in `data/game.json`); banners still go to everyone. Fixes a leak (e.g. "whiff" revealed a killer anywhere on the map).
 - 2026-10-24: anti-abuse: per-socket token bucket (`server.messagesPerSecond`) and a room cap (`server.maxRooms`). Unit tests (`npm test`, no server needed) and GitHub CI (typecheck + tests + build).
 - 2026-10-25: leaving mid-game: removed without a body after the grace, banner to everyone, victory rechecked (option A, no bot).
+- 2026-10-25: portals (2 diagonal pairs, 1 s channel, 8 s cooldown) and seats around the Nexus table during meetings.

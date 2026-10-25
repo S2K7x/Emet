@@ -57,6 +57,14 @@ for (const z of map.data.zones) {
   check(reach / total > 0.9, `zone ${z.label} reachable from the spawn (${Math.round((reach / total) * 100)} %)`);
 }
 
+// Portals: each one free, reachable, paired both ways, and away from task stations.
+for (const p of map.data.portals ?? []) {
+  const pair = map.data.portals!.find((q) => q.id === p.pair);
+  check(!!pair && pair.pair === p.id, `portal ${p.id} paired both ways`);
+  check(free(p.x, p.y) && !!seen[Math.round(p.y / STEP) * cols + Math.round(p.x / STEP)], `portal ${p.id} clear and reachable`);
+  check(map.data.stations.every((st) => Math.hypot(st.x - p.x, st.y - p.y) > 150), `portal ${p.id} away from task stations`);
+}
+
 // A player running into a wall stops against it.
 let p = { x: 900, y: 700 };
 for (let i = 0; i < 60; i++) p = map.collide(p.x - 11, p.y, r);

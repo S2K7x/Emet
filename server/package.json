@@ -14,6 +14,7 @@
     "test:map": "tsx scripts/maptest.ts",
     "test:powers": "node scripts/powerstest.mjs",
     "test:loop": "node scripts/looptest.mjs",
+    "test:portals": "node scripts/portaltest.mjs",
     "test:zones": "node scripts/zonetest.mjs"
   },
   "dependencies": {

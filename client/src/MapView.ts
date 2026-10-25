@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import type { Decor, MapData, Prop, Zone } from "../../shared/map.ts";
+import type { Decor, MapData, Portal, Prop, Zone } from "../../shared/map.ts";
+import config from "../../data/game.json";
 
 const INK = 0x141118;
 const FONT = "Outfit, system-ui, sans-serif";
@@ -37,6 +38,7 @@ export function drawMap(scene: Phaser.Scene, map: MapData) {
   for (const d of map.decor ?? []) drawDecor(scene, decor, d, zoneAt(map, d.x, d.y), rand);
 
   for (const door of map.doors ?? []) drawDoor(scene, map, door);
+  for (const portal of map.portals ?? []) drawPortal(scene, map, portal);
 
   // Island edge: thick outline and a cliff face under the bottom edge.
   const edge = scene.add.graphics().setDepth(D.floor);
@@ -203,6 +205,29 @@ function drawDoor(scene: Phaser.Scene, map: MapData, [x, y, w, h]: number[]) {
     else g.lineBetween(px - 6, py - 8, px + 4, py).lineBetween(px + 4, py, px - 6, py + 8);
   }
   scene.tweens.add({ targets: g, alpha: 0.45, duration: 900 + Math.random() * 400, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+}
+
+// Portal pad: a swirling ring in the pair's color, labeled with where it leads.
+function drawPortal(scene: Phaser.Scene, map: MapData, p: Portal) {
+  const r = config.portal.radius;
+  const color = hex(p.color);
+  const pad = scene.add.graphics().setDepth(D.door);
+  pad.fillStyle(0x000000, 0.25).fillEllipse(p.x + 4, p.y + 6, r * 2.3, r * 1.5);
+  pad.fillStyle(INK).fillEllipse(p.x, p.y, r * 2.3, r * 1.5);
+  pad.fillStyle(color).fillEllipse(p.x, p.y, r * 2.3 - 10, r * 1.5 - 10);
+  pad.fillStyle(mix(color, 0xffffff, 0.55)).fillEllipse(p.x, p.y, r * 1.1, r * 0.7);
+  const swirl = scene.add.graphics({ x: p.x, y: p.y }).setDepth(D.door).setScale(1, 0.65);
+  swirl.lineStyle(4, 0xffffff, 0.85);
+  for (let i = 0; i < 3; i++) swirl.beginPath().arc(0, 0, r * 0.75, (i * Math.PI * 2) / 3, (i * Math.PI * 2) / 3 + 1.1).strokePath();
+  scene.tweens.add({ targets: swirl, angle: 360, duration: 2600, repeat: -1 });
+  const pair = map.portals?.find((q) => q.id === p.pair);
+  const to = pair && zoneAt(map, pair.x, pair.y);
+  if (to) {
+    scene.add
+      .text(p.x, p.y + r + 6, `🌌 ${to.label}`, { fontFamily: FONT, fontSize: "18px", fontStyle: "800", color: "#ffffff", stroke: "#141118", strokeThickness: 5 })
+      .setOrigin(0.5, 0)
+      .setDepth(D.door);
+  }
 }
 
 function drawDecor(scene: Phaser.Scene, g: Phaser.GameObjects.Graphics, d: Decor, z: Zone | undefined, rand: () => number) {

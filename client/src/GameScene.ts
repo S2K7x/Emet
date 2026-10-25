@@ -212,7 +212,7 @@ export class GameScene extends Phaser.Scene {
       avatar.lastX = x;
       avatar.body.setPosition(x, y).setAlpha(pb.alive ? 1 : 0.35);
       avatar.shield.setVisible(st.has("shield")).setScale(1 + Math.sin(t / 200) * 0.04);
-      const badge = st.has("dj") ? "🎧🎶" : st.has("dance") ? "💃" : st.has("slip") ? "🍌" : "";
+      const badge = st.has("dj") ? "🎧🎶" : st.has("dance") ? "💃" : st.has("slip") ? "🍌" : st.has("warp") ? "🌌" : "";
       avatar.badge.setText(badge).setPosition(x, y - this.joined.radius * 1.1 - 34 + Math.sin(t / 150) * 3);
       avatar.label
         .setPosition(x, y - this.joined.radius * 1.1 - 12)
@@ -387,7 +387,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (fx.x === undefined || fx.y === undefined) return;
-    const emoji = { poof: "💨", shield: "🫧", pop: "💥", slip: "🍌💫", zap: "⚡", revive: "✨", chomp: "🦴", whiff: "❄️💫" }[fx.kind] ?? "❗";
+    const emoji = { poof: "💨", shield: "🫧", pop: "💥", slip: "🍌💫", zap: "⚡", revive: "✨", chomp: "🦴", whiff: "❄️💫", warp: "🌌✨" }[fx.kind] ?? "❗";
     const text = this.add.text(fx.x, fx.y - 20, emoji, { fontFamily: FONT, fontSize: "40px" }).setOrigin(0.5).setDepth(4);
     this.tweens.add({ targets: text, y: fx.y - 90, alpha: 0, scale: 1.6, duration: 1200, ease: "Cubic.easeOut", onComplete: () => text.destroy() });
   }

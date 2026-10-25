@@ -5,7 +5,7 @@ export type Role = "innocent" | "killer" | "neutral";
 // A team, or the id of a neutral role that wins alone (jester, vulture).
 export type Winner = "innocent" | "killer" | string;
 // Visible status effects drawn on a player.
-export type Status = "dance" | "dj" | "shield" | "slip";
+export type Status = "dance" | "dj" | "shield" | "slip" | "warp";
 export type Phase = "lobby" | "playing" | "meeting" | "ended";
 export type MeetingStage = "discussion" | "vote" | "result";
 export type MeetingKind = "report" | "emergency" | "round";

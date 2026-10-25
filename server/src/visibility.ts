@@ -57,6 +57,7 @@ function statusOf(p: Player, now: number): Status[] | undefined {
   if (now < p.djUntil) s.push("dj");
   if (now < p.shieldUntil) s.push("shield");
   if (now < p.slipUntil) s.push("slip");
+  if (p.warp) s.push("warp");
   return s.length ? s : undefined;
 }
 

@@ -5,6 +5,8 @@ import type { WebSocket } from "ws";
 import { SKIP, type ServerMsg } from "../../shared/protocol.ts";
 import { Meeting } from "../src/meeting.ts";
 import { Room } from "../src/room.ts";
+import config from "../../data/game.json" with { type: "json" };
+import mapData from "../../data/map.json" with { type: "json" };
 
 type FakeSocket = { readyState: number; OPEN: number; sent: ServerMsg[]; send(s: string): void; close(): void };
 const fakeSocket = (): FakeSocket => ({ readyState: 1, OPEN: 1, sent: [], send(s) { this.sent.push(JSON.parse(s)); }, close() {} });
@@ -148,6 +150,52 @@ describe("Leaving mid-game", () => {
     });
     room.remove("p1");
     assert.equal(banners(sockets[0]).length, 0);
+  });
+});
+
+describe("Portals", () => {
+  const portal = (id: string) => mapData.portals.find((p) => p.id === id)!;
+  const standOn = (r: any, p: any, at: { x: number; y: number }, seconds: number) => {
+    Object.assign(p, { x: at.x, y: at.y, input: { dx: 0, dy: 0 }, vel: { x: 0, y: 0 } });
+    for (let t = 0; t < seconds; t += 0.05) r.updateWarp(p, 0.05, Date.now(), false);
+  };
+
+  it("standing still on a portal for the channel time warps to its pair, then cooldown", () => {
+    const { r, innocents } = startedRoom(5);
+    const [p] = innocents;
+    const moon = portal("moon");
+    const candy = portal(moon.pair);
+    standOn(r, p, moon, config.portal.channel * 0.5);
+    assert.equal(p.x, moon.x, "warped before the channel time");
+    standOn(r, p, moon, config.portal.channel * 0.6);
+    assert.deepEqual({ x: p.x, y: p.y }, { x: candy.x, y: candy.y });
+    standOn(r, p, candy, config.portal.channel * 2);
+    assert.equal(p.x, candy.x, "warped back during the cooldown");
+  });
+
+  it("moving cancels the channel", () => {
+    const { r, innocents } = startedRoom(5);
+    const [p] = innocents;
+    const moon = portal("moon");
+    standOn(r, p, moon, config.portal.channel * 0.8);
+    r.updateWarp(p, 0.05, Date.now(), true);
+    assert.equal(p.warp, undefined);
+    standOn(r, p, moon, config.portal.channel * 0.5);
+    assert.equal(p.x, moon.x, "progress kept after moving");
+  });
+});
+
+describe("Meeting seats", () => {
+  it("the living sit around the table and leave from there", () => {
+    const { r, all, innocents } = startedRoom(6);
+    for (const p of all) Object.assign(p, { x: 150, y: 150 });
+    r.killPlayer(innocents[0]);
+    r.startMeeting("", "", "emergency");
+    const seats = all.map((p: any) => ({ x: p.x, y: p.y }));
+    assert.deepEqual({ x: innocents[0].x, y: innocents[0].y }, { x: 150, y: 150 }, "the dead don't take a seat");
+    for (const p of all) if (p.alive) assert.ok(Math.hypot(p.x - mapData.spawn.x, p.y - mapData.spawn.y) < 200, `${p.id} not at the table`);
+    for (let i = 1; r.meeting && i < 10; i++) r.updateMeeting(Date.now() + i * 1e6);
+    assert.deepEqual(all.map((p: any) => ({ x: p.x, y: p.y })), seats, "moved after the meeting");
   });
 });
 

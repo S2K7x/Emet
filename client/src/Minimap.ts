@@ -98,6 +98,13 @@ export class Minimap {
     }
     c.fillStyle = "#141118";
     for (const [x, y, ww, hh] of this.map.walls) c.fillRect(x * s, y * s, Math.max(ww * s, dpr), Math.max(hh * s, dpr));
+    // Portals: a dot in each pair's color.
+    for (const p of this.map.portals ?? []) {
+      c.fillStyle = p.color;
+      c.beginPath();
+      c.arc(p.x * s, p.y * s, Math.max(4 * dpr, 40 * s), 0, Math.PI * 2);
+      c.fill();
+    }
 
     // Zone names, only when it's big enough to read.
     if (w > 300 * dpr) {

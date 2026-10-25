@@ -26,6 +26,14 @@ export interface ZoneRule {
   vision?: number; // vision radius (px) for non-killers standing here
 }
 
+export interface Portal {
+  id: string;
+  x: number;
+  y: number;
+  pair: string; // id of the portal it leads to
+  color: string;
+}
+
 export interface Prop {
   type: string;
   shape?: "rect" | "circle"; // absent = scenery, you walk through it
@@ -55,6 +63,7 @@ export interface MapData {
   zones: Zone[];
   walls: number[][]; // [x, y, w, h]
   doors?: number[][]; // [x, y, w, h] openings between zones, drawn as portal gates
+  portals?: Portal[]; // pairs: stand still on one to warp to its pair
   decor?: Decor[];
   props: Prop[];
   emergency: { x: number; y: number }; // the big red button
@@ -91,6 +100,10 @@ export class MapGeometry {
     let found: Zone | undefined;
     for (const z of this.data.zones) if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) found = z;
     return found;
+  }
+
+  portalAt(x: number, y: number, radius: number): Portal | undefined {
+    return this.data.portals?.find((p) => Math.hypot(p.x - x, p.y - y) <= radius);
   }
 
   ruleAt(x: number, y: number): ZoneRule | undefined {

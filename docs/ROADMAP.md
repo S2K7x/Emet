@@ -24,7 +24,7 @@
 
 ## Phase 4: multiverse
 - [x] 4 zones with different rules (low gravity, ice, dark, sugar rush)
-- [ ] Portals and meeting place
+- [x] Portals and meeting place (2 diagonal portal pairs, seats around the Nexus table)
 
 ## Phase 5: polish and content
 - [ ] 6 to 8 more roles

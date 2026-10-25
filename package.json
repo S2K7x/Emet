@@ -20,6 +20,7 @@
     "test:map": "npm run test:map -w server",
     "test:powers": "npm run test:powers -w server",
     "test:loop": "npm run test:loop -w server",
+    "test:portals": "npm run test:portals -w server",
     "test:zones": "npm run test:zones -w server"
   }
 }
