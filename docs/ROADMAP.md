@@ -23,7 +23,7 @@
 - [x] Assignment: 2 roles offered, 1 kept
 
 ## Phase 4: multiverse
-- [ ] 4 zones with different rules
+- [x] 4 zones with different rules (low gravity, ice, dark, sugar rush)
 - [ ] Portals and meeting place
 
 ## Phase 5: polish and content

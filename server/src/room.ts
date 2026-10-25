@@ -20,6 +20,7 @@ interface Player {
   x: number;
   y: number;
   input: { dx: number; dy: number };
+  vel: { x: number; y: number }; // px/s, for zones with inertia (Moon, Ice)
   socket: WebSocket;
   token: string;
   awayUntil?: number; // disconnected: removed from the game after this timestamp
@@ -92,6 +93,7 @@ export class Room {
       x: spot.x,
       y: spot.y,
       input: { dx: 0, dy: 0 },
+      vel: { x: 0, y: 0 },
       socket,
       token: randomUUID(),
       role: "innocent",
@@ -282,6 +284,7 @@ export class Room {
     this.lightsOutUntil = 0;
     for (const q of this.players.values()) {
       q.input = { dx: 0, dy: 0 };
+      q.vel = { x: 0, y: 0 };
       q.working = undefined;
       q.offer = undefined;
       q.danceUntil = q.djUntil = q.slipUntil = 0;
@@ -369,9 +372,15 @@ export class Room {
     this.timers.push({ at: Date.now() + seconds * 1000, fn });
   }
 
+  // Banners go to everyone; an effect at a position only reaches those who could see that spot
+  // (vision rules + roughly one screen away), so it never leaks a killer's whereabouts or role.
   private fx(kind: string, at?: { x: number; y: number }, text?: string) {
     const msg: ServerMsg = { t: "fx", kind, text, x: at && Math.round(at.x), y: at && Math.round(at.y) };
-    for (const q of this.players.values()) send(q.socket, msg);
+    const now = Date.now();
+    for (const q of this.players.values()) {
+      if (at && (Math.hypot(at.x - q.x, at.y - q.y) > config.fx.range || !this.canSee(q, at, now))) continue;
+      send(q.socket, msg);
+    }
   }
 
   // Services exposed to power handlers (powers.ts).
@@ -493,17 +502,26 @@ export class Room {
     if (this.phase !== "playing" || !killer || !killer.alive || killer.role !== "killer" || now < killer.nextKillAt) return;
 
     // The server picks the target: alive, not a killer, closest within range.
+    // Zone rule: someone floating on the Moon is harder to grab (shorter range).
     let target: Player | undefined;
-    let best = config.kill.range;
+    let best = Infinity;
     for (const p of this.players.values()) {
       if (!p.alive || p.role === "killer") continue;
       const d = Math.hypot(p.x - killer.x, p.y - killer.y);
-      if (d <= best && !map.blocked(killer.x, killer.y, p.x, p.y)) {
+      const range = config.kill.range * (map.ruleAt(p.x, p.y)?.killRange ?? 1);
+      if (d <= range && d < best && !map.blocked(killer.x, killer.y, p.x, p.y)) {
         best = d;
         target = p;
       }
     }
     if (!target) return;
+
+    // Zone rule: a killer on ice can slip and miss.
+    if (Math.random() < (map.ruleAt(killer.x, killer.y)?.killMiss ?? 0)) {
+      killer.nextKillAt = now + config.kill.missCooldown * 1000;
+      this.fx("whiff", killer);
+      return;
+    }
 
     killer.nextKillAt = now + config.kill.cooldown * 1000;
     if (target.shieldUntil > now) {
@@ -552,14 +570,26 @@ export class Room {
       if (this.phase === "meeting") break; // nobody moves during a meeting
       if (p.disguise && now > p.disguise.until) p.disguise = undefined;
       if (p.alive && now < p.danceUntil) {
+        p.vel = { x: 0, y: 0 };
         this.updateWork(p, dt, false); // DJ: dancing on the spot (tasks still progress)
         continue;
       }
       const slipping = p.alive && now < p.slipUntil;
       const dir = slipping ? p.slipDir : p.input;
       this.updateWork(p, dt, slipping || Math.hypot(dir.dx, dir.dy) > 0.05);
-      const v = speed * (slipping ? (roleDefs.get("prankster")?.params.slipSpeed ?? 1.8) : 1);
-      ({ x: p.x, y: p.y } = map.collide(p.x + dir.dx * v * dt, p.y + dir.dy * v * dt, radius));
+      // Zone rule: speed multiplier, and inertia (velocity eases toward the input) on Moon/Ice.
+      const rule = map.ruleAt(p.x, p.y);
+      const v = speed * (rule?.speed ?? 1) * (slipping ? (roleDefs.get("prankster")?.params.slipSpeed ?? 1.8) : 1);
+      const target = { x: dir.dx * v, y: dir.dy * v };
+      if (slipping || !rule?.friction) p.vel = target;
+      else {
+        const k = Math.min(1, rule.friction * dt);
+        p.vel = { x: p.vel.x + (target.x - p.vel.x) * k, y: p.vel.y + (target.y - p.vel.y) * k };
+      }
+      const before = { x: p.x, y: p.y };
+      ({ x: p.x, y: p.y } = map.collide(p.x + p.vel.x * dt, p.y + p.vel.y * dt, radius));
+      // Walls absorb the momentum (no sliding forever into a wall).
+      if (dt > 0) p.vel = { x: (p.x - before.x) / dt, y: (p.y - before.y) / dt };
       if (p.alive && !slipping && this.phase === "playing") this.checkBanana(p, now);
     }
 
@@ -611,13 +641,17 @@ export class Room {
     this.fx("slip", p);
   }
 
-  // Lights out: innocents and neutrals only see what's close to them.
-  private blind(viewer: Player, now: number) {
-    return this.phase === "playing" && now < this.lightsOutUntil && viewer.alive && viewer.role !== "killer";
+  // Lights out, or standing in a dark zone: innocents and neutrals only see what's close to them.
+  private visionOf(viewer: Player, now: number): number | undefined {
+    if (this.phase !== "playing" || !viewer.alive || viewer.role === "killer") return undefined;
+    const radii = [now < this.lightsOutUntil ? this.vision : Infinity, map.ruleAt(viewer.x, viewer.y)?.vision ?? Infinity];
+    const r = Math.min(...radii);
+    return r === Infinity ? undefined : r;
   }
 
   private canSee(viewer: Player, at: { x: number; y: number }, now: number) {
-    return !this.blind(viewer, now) || Math.hypot(at.x - viewer.x, at.y - viewer.y) <= this.vision;
+    const r = this.visionOf(viewer, now);
+    return r === undefined || Math.hypot(at.x - viewer.x, at.y - viewer.y) <= r;
   }
 
   private youFor(p: Player, now: number): YouView {
@@ -633,7 +667,7 @@ export class Room {
         uses: p.uses >= 0 ? p.uses : undefined,
         progress: def.id === "vulture" ? `${p.eaten}/${def.params.goal}` : undefined,
       },
-      blind: this.blind(p, now) ? this.vision : undefined,
+      blind: this.visionOf(p, now),
       tasks: p.tasks,
       working: p.working && { station: p.working.station, ready: p.working.seconds >= minigames.minSeconds },
       emergencies: p.emergencies,
@@ -682,7 +716,6 @@ export class Room {
     if (this.phase === "lobby") return undefined;
     if (this.phase === "ended" || viewer.id === p.id) return p.role;
     if (config.killers.knowEachOther && viewer.role === "killer" && p.role === "killer") return "killer";
-    return undefined;
     return undefined;
   }
 }

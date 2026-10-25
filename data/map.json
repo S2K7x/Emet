@@ -15,10 +15,10 @@
     { "id": "cake", "game": "cake", "label": "Frost the cake", "icon": "🎂", "x": 1575, "y": 1070 }
   ],
   "zones": [
-    { "id": "lune", "label": "MOON", "labelAt": [380, 300], "x": 0, "y": 0, "w": 1000, "h": 700, "floor": "#e7e3f4", "accent": "#b9b0d9" },
-    { "id": "glace", "label": "ICE", "x": 1000, "y": 0, "w": 1000, "h": 700, "floor": "#dcf1fb", "accent": "#9fd3ec" },
-    { "id": "neon", "label": "NEON", "x": 0, "y": 700, "w": 1000, "h": 700, "floor": "#2a2340", "accent": "#ff4fd8" },
-    { "id": "candy", "label": "CANDY", "labelAt": [1560, 900], "x": 1000, "y": 700, "w": 1000, "h": 700, "floor": "#ffe3ef", "accent": "#ff8cc0" },
+    { "id": "lune", "label": "MOON", "labelAt": [380, 300], "x": 0, "y": 0, "w": 1000, "h": 700, "floor": "#e7e3f4", "accent": "#b9b0d9", "rule": { "id": "lowgravity", "label": "Low gravity", "icon": "🌙", "desc": "Floaty moves, harder to grab", "friction": 4, "speed": 1.1, "killRange": 0.7 } },
+    { "id": "glace", "label": "ICE", "x": 1000, "y": 0, "w": 1000, "h": 700, "floor": "#dcf1fb", "accent": "#9fd3ec", "rule": { "id": "ice", "label": "Slippery floor", "icon": "❄️", "desc": "You keep sliding. Killers can slip and miss", "friction": 1.2, "killMiss": 0.3 } },
+    { "id": "neon", "label": "NEON", "x": 0, "y": 700, "w": 1000, "h": 700, "floor": "#2a2340", "accent": "#ff4fd8", "rule": { "id": "dark", "label": "Dark zone", "icon": "🌃", "desc": "You can barely see. Killers can", "vision": 230 } },
+    { "id": "candy", "label": "CANDY", "labelAt": [1560, 900], "x": 1000, "y": 700, "w": 1000, "h": 700, "floor": "#ffe3ef", "accent": "#ff8cc0", "rule": { "id": "sugar", "label": "Sugar rush", "icon": "🍬", "desc": "Everyone runs 30% faster", "speed": 1.3 } },
     { "id": "hub", "label": "NEXUS", "x": 760, "y": 520, "w": 480, "h": 360, "floor": "#fff4dd", "accent": "#f6b928" }
   ],
   "walls": [

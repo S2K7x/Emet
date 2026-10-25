@@ -10,6 +10,20 @@ export interface Zone {
   h: number;
   floor: string;
   accent: string;
+  rule?: ZoneRule;
+}
+
+// Gameplay rule of a zone. Every field is optional; absent = normal.
+export interface ZoneRule {
+  id: string;
+  label: string;
+  icon: string;
+  desc: string;
+  speed?: number; // movement speed multiplier
+  friction?: number; // how fast velocity catches up with input (per second); low = slippery/floaty
+  killRange?: number; // multiplier on the kill range against someone standing here
+  killMiss?: number; // chance that a killer standing here misses
+  vision?: number; // vision radius (px) for non-killers standing here
 }
 
 export interface Prop {
@@ -70,6 +84,17 @@ export class MapGeometry {
       if (p.shape === "rect") this.rects.push({ x: p.x, y: p.y, w: p.w!, h: p.h! });
       if (p.shape === "circle") this.circles.push({ x: p.x, y: p.y, r: p.r! });
     }
+  }
+
+  // Zone at a point. Zones can overlap (the hub sits on top): the last one listed wins.
+  zoneAt(x: number, y: number): Zone | undefined {
+    let found: Zone | undefined;
+    for (const z of this.data.zones) if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) found = z;
+    return found;
+  }
+
+  ruleAt(x: number, y: number): ZoneRule | undefined {
+    return this.zoneAt(x, y)?.rule;
   }
 
   // Places n players in an ellipse around the spawn point.

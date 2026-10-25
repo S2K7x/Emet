@@ -1,5 +1,9 @@
 {
   "tickRate": 20,
+  "server": {
+    "maxRooms": 200,
+    "messagesPerSecond": 120
+  },
   "minPlayers": 4,
   "maxPlayers": 10,
   "player": {
@@ -21,7 +25,8 @@
   "kill": {
     "range": 80,
     "cooldown": 20,
-    "initialCooldown": 10
+    "initialCooldown": 10,
+    "missCooldown": 3
   },
   "killers": {
     "byPlayers": {
@@ -63,6 +68,9 @@
   "emergency": {
     "perPlayer": 1,
     "range": 130
+  },
+  "fx": {
+    "range": 900
   },
   "roles": {
     "choices": 2,

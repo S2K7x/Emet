@@ -58,6 +58,7 @@ export class GameScene extends Phaser.Scene {
     () => this.net.send({ t: "taskCancel" }),
   );
   private doneSent = false;
+  private zoneId?: string; // zone I'm in, to announce its rule on entry
   private bannerTimer?: ReturnType<typeof setTimeout>;
   private pendingTextures = new Map<string, (() => void)[]>();
   private keys!: Record<"up" | "down" | "left" | "right" | "w" | "a" | "s" | "d", Phaser.Input.Keyboard.Key>;
@@ -200,6 +201,10 @@ export class GameScene extends Phaser.Scene {
       } else if (st.has("slip")) {
         avatar.sprite.rotation = t / 60;
         avatar.sprite.y = -this.joined.radius * 0.8;
+      } else if (moving && map.ruleAt(x, y)?.id === "lowgravity") {
+        // Moon: big floaty hops.
+        avatar.sprite.rotation = Math.sin(t / 180) * 0.05;
+        avatar.sprite.y = -Math.abs(Math.sin(t / 220)) * 16;
       } else {
         avatar.sprite.rotation = moving ? Math.sin(t / 70) * 0.09 : 0;
         avatar.sprite.y = moving ? -Math.abs(Math.sin(t / 70)) * 3 : 0;
@@ -234,6 +239,21 @@ export class GameScene extends Phaser.Scene {
       ? [...b.players.keys()].filter((id) => id !== this.joined.you).map(dotOf).filter((d) => d !== undefined)
       : [];
     this.minimap.draw(dotOf(this.joined.you), others, this.cameras.main.worldView);
+    this.drawDarkness();
+  }
+
+  // Lights out / dark zone: a hole of light centered on my avatar (the camera lags and stops at map edges).
+  private drawDarkness() {
+    const blind = this.latest?.you.blind;
+    const me = this.avatars.get(this.joined.you);
+    if (!blind || !me) return;
+    const cam = this.cameras.main;
+    const x = (me.body.x - cam.worldView.x) * cam.zoom;
+    const y = (me.body.y - cam.worldView.y) * cam.zoom;
+    const r = blind * cam.zoom;
+    const dark = $("dark");
+    dark.style.background = `radial-gradient(circle at ${x}px ${y}px, transparent ${r * 0.6}px, rgba(8,6,14,.97) ${r}px)`;
+    dark.style.display = "block";
   }
 
   private createAvatar(p: PlayerView): Avatar {
@@ -367,7 +387,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (fx.x === undefined || fx.y === undefined) return;
-    const emoji = { poof: "💨", shield: "🫧", pop: "💥", slip: "🍌💫", zap: "⚡", revive: "✨", chomp: "🦴" }[fx.kind] ?? "❗";
+    const emoji = { poof: "💨", shield: "🫧", pop: "💥", slip: "🍌💫", zap: "⚡", revive: "✨", chomp: "🦴", whiff: "❄️💫" }[fx.kind] ?? "❗";
     const text = this.add.text(fx.x, fx.y - 20, emoji, { fontFamily: FONT, fontSize: "40px" }).setOrigin(0.5).setDepth(4);
     this.tweens.add({ targets: text, y: fx.y - 90, alpha: 0, scale: 1.6, duration: 1200, ease: "Cubic.easeOut", onComplete: () => text.destroy() });
   }
@@ -425,10 +445,17 @@ export class GameScene extends Phaser.Scene {
     const isHost = s.host === this.joined.you;
     const count = s.players.length;
 
+    const meNow = s.players.find((p) => p.id === this.joined.you);
+    const zone = meNow && s.phase === "playing" ? map.zoneAt(meNow.x, meNow.y) : undefined;
     $("hud").textContent =
       s.phase === "lobby"
         ? `Room ${this.joined.code} · ${count} player${count === 1 ? "" : "s"}` + (isHost ? "" : " · waiting for host")
-        : `Room ${this.joined.code}`;
+        : `Room ${this.joined.code}` + (zone?.rule ? ` · ${zone.rule.icon} ${zone.rule.label}` : "");
+    // Entering a zone with a rule: announce it.
+    if (zone?.id !== this.zoneId) {
+      this.zoneId = zone?.id;
+      if (zone?.rule && s.you.alive) this.showFx({ t: "fx", kind: "banner", text: `${zone.rule.icon} ${zone.label}: ${zone.rule.desc}` });
+    }
 
     const start = $("start") as HTMLButtonElement;
     start.style.display = isHost && (s.phase === "lobby" || s.phase === "ended") ? "block" : "none";
@@ -503,14 +530,7 @@ export class GameScene extends Phaser.Scene {
       use.textContent = `🚨 Emergency (${s.you.emergencies})`;
     }
 
-    const dark = $("dark");
-    if (s.you.blind) {
-      const r = s.you.blind * this.cameras.main.zoom;
-      dark.style.background = `radial-gradient(circle at 50% 50%, transparent ${r * 0.6}px, rgba(8,6,14,.97) ${r}px)`;
-      dark.style.display = "block";
-    } else {
-      dark.style.display = "none";
-    }
+    if (!s.you.blind) $("dark").style.display = "none"; // drawn each frame in drawDarkness()
 
     const report = $("report") as HTMLButtonElement;
     const canReport = s.phase === "playing" && s.you.alive;
@@ -600,7 +620,9 @@ export class GameScene extends Phaser.Scene {
     const me = s.players.find((p) => p.id === this.joined.you);
     if (!me) return false;
     return s.players.some(
-      (p) => p.id !== me.id && p.alive && p.role !== "killer" && map.reachable(me.x, me.y, p.x, p.y, this.joined.killRange),
+      (p) =>
+        p.id !== me.id && p.alive && p.role !== "killer" &&
+        map.reachable(me.x, me.y, p.x, p.y, this.joined.killRange * (map.ruleAt(p.x, p.y)?.killRange ?? 1)),
     );
   }
 }

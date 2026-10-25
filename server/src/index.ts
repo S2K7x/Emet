@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { WebSocketServer } from "ws";
 import type { ClientMsg } from "../../shared/protocol.ts";
+import config from "../../data/game.json" with { type: "json" };
 import { Room, send } from "./room.ts";
 
 const PORT = Number(process.env.PORT ?? 2567);
@@ -73,8 +74,18 @@ wss.on("connection", (socket) => {
   let room: Room | undefined;
   alive.add(socket);
   socket.on("pong", () => alive.add(socket));
+  // Token bucket: a flood (scripted client) is dropped, a normal player never hits it (touch input ≈ 1 msg per frame).
+  const rate = config.server.messagesPerSecond;
+  let tokens = rate;
+  let refilledAt = Date.now();
 
   socket.on("message", (raw) => {
+    const now = Date.now();
+    tokens = Math.min(rate, tokens + ((now - refilledAt) / 1000) * rate);
+    refilledAt = now;
+    if (tokens < 1) return;
+    tokens--;
+
     let msg: ClientMsg;
     try {
       msg = JSON.parse(raw.toString());
@@ -83,6 +94,8 @@ wss.on("connection", (socket) => {
     }
 
     if (msg.t === "create" && !room) {
+      // Each room ticks at 20 Hz: cap them so a script can't exhaust the (free) server.
+      if (rooms.size >= config.server.maxRooms) return send(socket, { t: "error", message: "Server full, try again in a minute" });
       const code = newCode();
       room = new Room(code, () => rooms.delete(code));
       rooms.set(code, room);

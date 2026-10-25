@@ -11,6 +11,7 @@
     "dev:server": "npm run dev -w server",
     "dev:client": "npm run dev -w client",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "test": "npm test -w server",
     "test:kill": "npm run test:kill -w server",
     "test:meeting": "npm run test:meeting -w server",
     "build": "npm run build -w client",
@@ -18,6 +19,7 @@
     "test:reconnect": "npm run test:reconnect -w server",
     "test:map": "npm run test:map -w server",
     "test:powers": "npm run test:powers -w server",
-    "test:loop": "npm run test:loop -w server"
+    "test:loop": "npm run test:loop -w server",
+    "test:zones": "npm run test:zones -w server"
   }
 }

@@ -59,6 +59,14 @@
 - Emergency button (2026-10-21): the big red button on the hub table, 1 per player per game, within 130 px of its center.
 - Role choice (2026-10-21): innocents and killers are offered 2 roles, pick 1 within 10 s (default: the first). Neutrals get no choice.
 
+- Zone rules (2026-10-21), data in `rule` on each zone of `data/map.json`, applied by the server:
+  - Moon, low gravity: floaty movement (inertia), kill range on someone in the Moon x0.7 (hard to grab a floating player).
+  - Ice, slippery floor: strong inertia (you keep sliding), a killer standing on ice misses 30% of kills (slips; short cooldown instead of the full one).
+  - Neon, dark zone: innocents/neutrals inside only see 230 px around them (filtered server-side, like Blackout). Killers see normally.
+  - Candy, sugar rush: speed x1.3.
+  - Nexus (hub): no rule, it's the safe-ish meeting point.
+  - Entering a zone shows its rule; the HUD shows the current zone.
+
 ## Open questions
 1. ~~Engine~~ → web (2026-10-19).
 2. Can a player tied by the Cop be killed? (proposal: yes, and the tied player becomes a witness)
@@ -86,3 +94,6 @@
 - 2026-10-21: game loop: rounds + game clock, quests and shared bar, emergency button, pick 1 of 2 roles, ghost tasks weight revival. `test:loop` test.
 - 2026-10-21: task mini-games (8: tune, rocks, fish, defrost, servers, whack, lollipop, cake).
 - 2026-10-21: in-game ghost chat.
+- 2026-10-21: zone rules (low gravity, ice, dark, sugar rush). `test:zones` test.
+- 2026-10-24: positional effects (`fx` with x/y: whiff, pop, poof, zap…) are only sent to players who can see the spot (vision rules + `fx.range` in `data/game.json`); banners still go to everyone. Fixes a leak (e.g. "whiff" revealed a killer anywhere on the map).
+- 2026-10-24: anti-abuse: per-socket token bucket (`server.messagesPerSecond`) and a room cap (`server.maxRooms`). Unit tests (`npm test`, no server needed) and GitHub CI (typecheck + tests + build).

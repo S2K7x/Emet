@@ -23,7 +23,7 @@ A game is played on a map made of **4 zones**, each in a different universe. Eac
 - 4 zones around it: Moon (top left), Ice (top right), Neon (bottom left), Candy (bottom right).
 - Each zone has 1 door to the Nexus and 1 door to each of its 2 neighboring zones (simple doors for now; portals come in Phase 4).
 - Walls and obstacles block movement **and line of sight**: no killing or reporting through a wall.
-- Zone rules (ice, gravity, etc.) are not active yet: Phase 1 only does the scenery.
+- Zone rules are active (`rule` on each zone in `map.json`, see `DECISIONS.md`): Moon = low gravity (floaty, harder to grab), Ice = slippery (sliding, killers can slip and miss), Neon = dark (non-killers see little), Candy = sugar rush (x1.3 speed). The Nexus has no rule. When zones overlap, the last one listed wins (the Nexus is listed last).
 - Visual style: one light source (top left), every wall and obstacle casts the same drop shadow; wall tops are tinted with their zone's color. Doors between zones (`doors` in `map.json`) are drawn as shimmering portal thresholds.
 - Decor (`decor` in `map.json`) never collides, so it stays flat (footprints, puddles, cables, donuts) or smaller than a player (rocks, penguins, plants, gumdrops): anything big must be a real obstacle. Decor doubles as landmarks for meeting callouts ("by the penguins", "near the NO EXIT sign").
 - Ambient motion per zone (twinkling stars, snowfall, neon motes, candy bubbles), purely cosmetic.
