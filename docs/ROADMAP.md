@@ -18,7 +18,7 @@
 
 ## Phase 3: roles
 - [x] Data-driven role system
-- [x] Roles: 7 innocent, 2 neutral (Cop not yet)
+- [x] Roles: 8 innocent (incl. Cop), 2 neutral
 - [x] Chaotic killer power (4 powers)
 - [x] Assignment: 2 roles offered, 1 kept
 

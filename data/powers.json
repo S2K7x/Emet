@@ -55,6 +55,13 @@
       "params": { "delay": 2.5 }
     },
     {
+      "id": "cop", "team": "innocent", "name": "Cop", "icon": "👮",
+      "power": "Ties the 2 closest players together with a rope for a while",
+      "weakness": "No idea who you tied: it can be a killer and their next victim",
+      "button": "Cuff", "uses": -1, "cooldown": 45, "enabled": true,
+      "params": { "range": 200, "rope": 150, "duration": 15 }
+    },
+    {
       "id": "jester", "team": "neutral", "name": "Jester", "icon": "🤡",
       "power": "You win alone if you get voted out. Prank call: one emergency meeting from anywhere",
       "weakness": "Killers can still get you",

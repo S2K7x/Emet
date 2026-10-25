@@ -68,6 +68,7 @@ export class GameScene extends Phaser.Scene {
   private revealCard: RevealCard;
   private lastPhase?: string;
   private minimap = new Minimap(map.data);
+  private ropes!: Phaser.GameObjects.Graphics; // Cop ropes between tied players
 
   constructor(private net: Net, private joined: Joined) {
     super("game");
@@ -80,6 +81,7 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.joined.map;
     this.cameras.main.setBackgroundColor("#221a38");
     drawMap(this, map.data);
+    this.ropes = this.add.graphics().setDepth(1.9); // just under the players
     this.cameras.main.setBounds(-200, -200, width + 400, height + 400);
 
     this.keys = this.input.keyboard!.addKeys({
@@ -212,7 +214,7 @@ export class GameScene extends Phaser.Scene {
       avatar.lastX = x;
       avatar.body.setPosition(x, y).setAlpha(pb.alive ? 1 : 0.35);
       avatar.shield.setVisible(st.has("shield")).setScale(1 + Math.sin(t / 200) * 0.04);
-      const badge = st.has("dj") ? "🎧🎶" : st.has("dance") ? "💃" : st.has("slip") ? "🍌" : st.has("warp") ? "🌌" : "";
+      const badge = st.has("dj") ? "🎧🎶" : st.has("dance") ? "💃" : st.has("slip") ? "🍌" : st.has("warp") ? "🌌" : st.has("tied") ? "⛓️" : "";
       avatar.badge.setText(badge).setPosition(x, y - this.joined.radius * 1.1 - 34 + Math.sin(t / 150) * 3);
       avatar.label
         .setPosition(x, y - this.joined.radius * 1.1 - 12)
@@ -228,6 +230,24 @@ export class GameScene extends Phaser.Scene {
         avatar.badge.destroy();
         this.avatars.delete(id);
       }
+    }
+
+    // Cop rope: a sagging line between the two tied players when both are on screen.
+    this.ropes.clear();
+    for (const [id, p] of b.players) {
+      const a1 = this.avatars.get(id);
+      const a2 = p.tether && id < p.tether ? this.avatars.get(p.tether) : undefined;
+      if (!a1 || !a2) continue;
+      const from = { x: a1.body.x, y: a1.body.y - 10 };
+      const to = { x: a2.body.x, y: a2.body.y - 10 };
+      const sag = Math.max(0, 60 - Math.hypot(to.x - from.x, to.y - from.y) / 3);
+      const curve = new Phaser.Curves.QuadraticBezier(
+        new Phaser.Math.Vector2(from.x, from.y),
+        new Phaser.Math.Vector2((from.x + to.x) / 2, (from.y + to.y) / 2 + sag),
+        new Phaser.Math.Vector2(to.x, to.y),
+      );
+      this.ropes.lineStyle(9, INK).strokePoints(curve.getPoints(16));
+      this.ropes.lineStyle(5, 0xc8a26a).strokePoints(curve.getPoints(16));
     }
 
     const dotOf = (id: string) => {
@@ -378,16 +398,17 @@ export class GameScene extends Phaser.Scene {
 
   // One-off effects: floating emoji on the map, or a banner for global ones.
   private showFx(fx: Extract<ServerMsg, { t: "fx" }>) {
-    if (fx.kind === "banner") {
+    // Witness (Cop rope): private, and important enough to stay up longer.
+    if (fx.kind === "banner" || fx.kind === "witness") {
       const banner = $("banner");
       banner.textContent = fx.text ?? "";
       banner.style.display = "block";
       clearTimeout(this.bannerTimer);
-      this.bannerTimer = setTimeout(() => (banner.style.display = "none"), 2500);
+      this.bannerTimer = setTimeout(() => (banner.style.display = "none"), fx.kind === "witness" ? 6000 : 2500);
       return;
     }
     if (fx.x === undefined || fx.y === undefined) return;
-    const emoji = { poof: "💨", shield: "🫧", pop: "💥", slip: "🍌💫", zap: "⚡", revive: "✨", chomp: "🦴", whiff: "❄️💫", warp: "🌌✨" }[fx.kind] ?? "❗";
+    const emoji = { poof: "💨", shield: "🫧", pop: "💥", slip: "🍌💫", zap: "⚡", revive: "✨", chomp: "🦴", whiff: "❄️💫", warp: "🌌✨", cuff: "⛓️" }[fx.kind] ?? "❗";
     const text = this.add.text(fx.x, fx.y - 20, emoji, { fontFamily: FONT, fontSize: "40px" }).setOrigin(0.5).setDepth(4);
     this.tweens.add({ targets: text, y: fx.y - 90, alpha: 0, scale: 1.6, duration: 1200, ease: "Cubic.easeOut", onComplete: () => text.destroy() });
   }

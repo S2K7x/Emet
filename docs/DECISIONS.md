@@ -12,6 +12,7 @@
 - Ejection vote: an innocent wrongly ejected stays ejected.
 - Dead players = ghosts, who only talk among themselves.
 - Cop: ties 2 players together, no special effect if one of them is a killer.
+- Cop details (2026-10-25): ties the 2 closest other living players (range 200 px, line of sight) with a 150 px rope for 15 s, cooldown 45 s (`cop` in `powers.json`). They drag each other; the rope shows on the map. It breaks when it runs out, at a meeting, on a death, or if they end up far apart (teleport, swap). Tied players can't use portals. A tied player can be killed: if the other one isn't the killer, they privately see "👁️ You saw X kill Y" (X = the look the killer wears, so a Shapeshifter frames someone). Random deaths (Gambler) have no witness.
 - Gambler: random kill and revival, once per game, visible wheel.
 - Engine: **web**. Phaser client (TypeScript, Vite), Node.js server + custom `ws` (not Colyseus: simpler per-player filtering, snapshot built per client).
 
@@ -72,7 +73,7 @@
 
 ## Open questions
 1. ~~Engine~~ → web (2026-10-19).
-2. Can a player tied by the Cop be killed? (proposal: yes, and the tied player becomes a witness)
+2. ~~Can a player tied by the Cop be killed?~~ → yes, and the other tied player becomes a witness (2026-10-25).
 3. Final name of the game (Emet is the folder name).
 4. Monetization (free, cosmetics)?
 5. Voice chat: built in from v1 or later?
@@ -102,3 +103,4 @@
 - 2026-10-24: anti-abuse: per-socket token bucket (`server.messagesPerSecond`) and a room cap (`server.maxRooms`). Unit tests (`npm test`, no server needed) and GitHub CI (typecheck + tests + build).
 - 2026-10-25: leaving mid-game: removed without a body after the grace, banner to everyone, victory rechecked (option A, no bot).
 - 2026-10-25: portals (2 diagonal pairs, 1 s channel, 8 s cooldown) and seats around the Nexus table during meetings.
+- 2026-10-25: Cop role (tie the 2 closest players, witness on a kill).

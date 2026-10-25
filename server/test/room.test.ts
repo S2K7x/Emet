@@ -185,6 +185,76 @@ describe("Portals", () => {
   });
 });
 
+describe("Cop", () => {
+  // Cop at the hub, two innocents close by, everyone else far away.
+  function copRoom() {
+    const g = startedRoom(6);
+    const [cop, a, b, ...rest] = g.innocents;
+    for (const p of g.all) Object.assign(p, { x: 1500, y: 1200 });
+    Object.assign(cop, { x: 1000, y: 620, roleId: "cop", uses: -1, nextPowerAt: 0 });
+    Object.assign(a, { x: 1060, y: 620 });
+    Object.assign(b, { x: 940, y: 620 });
+    Object.assign(g.killer, { x: 1000, y: 1000 });
+    for (const s of g.sockets.values()) s.sent = [];
+    return { ...g, cop, a, b, rest };
+  }
+  const witnessed = (s: FakeSocket) => s.sent.filter((m) => m.t === "fx" && m.kind === "witness").map((m: any) => m.text as string);
+
+  it("ties the 2 closest other players, and the rope holds them together", () => {
+    const { room, r, cop, a, b } = copRoom();
+    room.power(cop.id);
+    assert.equal(a.tether?.with, b.id);
+    assert.equal(b.tether?.with, a.id);
+    assert.equal(cop.tether, undefined, "the cop ties others, not themselves");
+    Object.assign(a, { x: 1150 });
+    Object.assign(b, { x: 850 });
+    r.updateTethers(Date.now());
+    assert.ok(Math.hypot(a.x - b.x, a.y - b.y) <= a.tether.rope + 0.01, "rope too long");
+  });
+
+  it("does nothing (and keeps the cooldown) with fewer than 2 players around", () => {
+    const { room, cop, b } = copRoom();
+    Object.assign(b, { x: 1500, y: 1200 });
+    room.power(cop.id);
+    assert.equal(cop.nextPowerAt, 0);
+  });
+
+  it("the other tied player witnesses a kill, under the killer's current look", () => {
+    const { room, r, sockets, cop, a, b, killer } = copRoom();
+    room.power(cop.id);
+    Object.assign(killer, { x: a.x + 30, y: a.y, nextKillAt: 0, disguise: { name: "Framed", color: "#000", look: { skin: "helmet" }, until: Date.now() + 10_000 } });
+    Object.assign(b, { x: a.x + 100 }); // farther from the killer than a
+    room.kill(killer.id);
+    assert.equal(a.alive, false);
+    assert.deepEqual(witnessed(sockets.get(b.id)!), [`👁️ You saw Framed kill ${a.name}!`]);
+    assert.deepEqual(witnessed(sockets.get(cop.id)!), [], "only the tied partner is a witness");
+    assert.equal(b.tether, undefined, "the rope breaks on a death");
+    void r;
+  });
+
+  it("no witness when the killer kills the player tied to them", () => {
+    const { r, sockets, a, killer } = copRoom();
+    r.world(Date.now()).tie(a, killer, 150, Date.now() + 10_000);
+    Object.assign(killer, { x: a.x + 30, y: a.y, nextKillAt: 0 });
+    (r as any).kill(killer.id);
+    assert.equal(a.alive, false);
+    for (const s of sockets.values()) assert.deepEqual(witnessed(s), []);
+  });
+
+  it("tied players can't use portals, and the rope snaps when teleported far apart", () => {
+    const { room, r, cop, a, b } = copRoom();
+    room.power(cop.id);
+    const moon = mapData.portals.find((p) => p.id === "moon")!;
+    Object.assign(a, { x: moon.x, y: moon.y });
+    for (let t = 0; t < config.portal.channel * 2; t += 0.05) r.updateWarp(a, 0.05, Date.now(), false);
+    assert.equal(a.x, moon.x, "warped while tied");
+    Object.assign(b, { x: 1800, y: 1200 });
+    r.updateTethers(Date.now());
+    assert.equal(a.tether, undefined);
+    assert.equal(b.tether, undefined);
+  });
+});
+
 describe("Meeting seats", () => {
   it("the living sit around the table and leave from there", () => {
     const { r, all, innocents } = startedRoom(6);

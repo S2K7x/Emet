@@ -73,6 +73,18 @@ for (let game = 1; game <= 3; game++) {
     check(bots.every((b) => b.snap.items.length === 1 && b.snap.items[0].kind === "banana"), "Prankster: banana visible to all");
   }
 
+  // Cop: everyone starts around the table, so the 2 closest get tied; the rope shows to all.
+  const cop = bots.find((b) => b.snap.you.power.id === "cop");
+  if (cop) {
+    await sleep(cop.snap.you.power.cooldown * 1000 + 200);
+    cop.send({ t: "power" });
+    await sleep(150);
+    const tied = bots[0].snap.players.filter((p) => p.tether);
+    check(tied.length === 2 && tied[0].tether === tied[1].id && tied[1].tether === tied[0].id, "Cop: 2 players tied to each other");
+    check(!tied.some((p) => p.id === cop.id), "Cop: the cop isn't tied");
+    check(tied.every((p) => p.status?.includes("tied")), "Cop: tied badge");
+  }
+
   // Chaos: everyone spams their power for a few seconds. The server must survive whatever happens.
   await sleep(6000);
   for (let i = 0; i < 20; i++) {

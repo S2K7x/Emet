@@ -58,6 +58,7 @@ function statusOf(p: Player, now: number): Status[] | undefined {
   if (now < p.shieldUntil) s.push("shield");
   if (now < p.slipUntil) s.push("slip");
   if (p.warp) s.push("warp");
+  if (p.tether) s.push("tied");
   return s.length ? s : undefined;
 }
 
@@ -82,6 +83,7 @@ export function viewFor(s: Sight, viewer: Player, now: number): PlayerView[] {
       role: roleVisibleTo(s, viewer, p),
       status: statusOf(p, now),
       roleId: s.phase === "ended" || p === viewer ? p.roleId : undefined,
+      tether: p.tether?.with,
     });
   }
   return views;

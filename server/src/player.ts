@@ -39,6 +39,7 @@ export interface Player {
   emergencies: number;
   warp?: { portal: string; seconds: number }; // standing still on a portal
   nextWarpAt: number; // timestamp ms
+  tether?: { with: string; rope: number; until: number }; // tied by the Cop
 }
 
 export type Body = BodyView & { fake?: boolean };

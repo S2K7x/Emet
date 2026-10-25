@@ -5,7 +5,7 @@ export type Role = "innocent" | "killer" | "neutral";
 // A team, or the id of a neutral role that wins alone (jester, vulture).
 export type Winner = "innocent" | "killer" | string;
 // Visible status effects drawn on a player.
-export type Status = "dance" | "dj" | "shield" | "slip" | "warp";
+export type Status = "dance" | "dj" | "shield" | "slip" | "warp" | "tied";
 export type Phase = "lobby" | "playing" | "meeting" | "ended";
 export type MeetingStage = "discussion" | "vote" | "result";
 export type MeetingKind = "report" | "emergency" | "round";
@@ -43,6 +43,7 @@ export interface PlayerView {
   alive: boolean;
   away?: boolean; // connection lost, waiting for reconnection
   status?: Status[];
+  tether?: string; // id of the player tied to this one (Cop rope)
   roleId?: string; // special role, only at game end (or yourself)
   // Only present if the recipient is allowed to know it (themselves, killer teammate, game end).
   role?: Role;

@@ -65,6 +65,7 @@ export interface PowerWorld {
   canRevive(victimId: string): boolean;
   emergency(caller: PowerPlayer): void;
   lightsOut(until: number, vision: number): void;
+  tie(a: PowerPlayer, b: PowerPlayer, rope: number, until: number): void;
   later(seconds: number, fn: () => void): void;
   fx(kind: string, at?: { x: number; y: number }, text?: string): void;
   win(winner: string): void;
@@ -105,6 +106,16 @@ export const handlers: Record<string, Handler> = {
     if (!target) return false;
     target.shieldUntil = w.now + duration * 1000;
     w.fx("shield", target);
+    return true;
+  },
+
+  cop(w, p, { range, rope, duration }) {
+    const a = w.closest(p, range, (q) => q !== p);
+    const b = a && w.closest(p, range, (q) => q !== p && q !== a);
+    if (!a || !b) return false;
+    w.tie(a, b, rope, w.now + duration * 1000);
+    w.fx("cuff", a);
+    w.fx("cuff", b);
     return true;
   },
 

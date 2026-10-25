@@ -37,6 +37,7 @@ Each player gets one special role on top of their team. Numbers (cooldown, uses,
 | 🎰 Gambler | Once: wheel spins, a random player dies, then a random killed player revives | Totally random, banner for everyone |
 | 🕯️ Sacrifice | Next to a body: you die, they revive. On a fake body you die for nothing | Once, permanent |
 | 🍁 Canadian | Passive: your body reports itself 2.5 s after you die | You have to die first |
+| 👮 Cop | Ties the 2 closest other players with a 150 px rope for 15 s: they drag each other, no portals. If one is killed by someone else, the other privately sees who did it | Blind pick: can tie a victim to a killer |
 
 ### Neutral (max 1 per game, `neutralChance`, from `neutralMinPlayers`)
 | Role | Win | Power |
@@ -61,13 +62,13 @@ Each player gets one special role on top of their team. Numbers (cooldown, uses,
 - Ideas from Goose Goose Duck (Canadian, Vulture, Dodo/Jester) and Among Us mods (Medic, Swapper, Morphling, Jester).
 
 ## Not built yet (ideas)
-- Flyer, Cop (tether), Detective, Ghost Radio, Mime, Ball and Chain (from the original list).
+- Flyer, Detective, Ghost Radio, Mime, Ball and Chain (from the original list).
 - Party Duck: gives players a squeaky voice in meetings (needs voice chat).
 - Mortician: sees how long a body has been dead.
 - Politician: wins vote ties.
 
 ## Interaction rules to decide / test
-- Can a player tied by the Cop be killed? Proposal: yes, and the closest tied player becomes a witness to the body.
+- Tied by the Cop and killed: allowed; the other tied player (if not the killer) privately sees who did it (see `DECISIONS.md`).
 - Sacrifice and Gambler can both revive: global cap of 2 revivals per game.
 - A killer pretending to be the Gambler (the wheel is visible): watch for this in playtests.
 

@@ -154,6 +154,7 @@ export class Room {
       p.working = undefined;
       p.warp = undefined;
       p.nextWarpAt = 0;
+      p.tether = undefined;
       p.ghostTasks = 0;
       // Everyone gets tasks (killers and neutrals: fake ones, as cover).
       p.tasks = shuffle(map.data.stations.map((st) => st.id)).slice(0, config.tasks.perPlayer).map((station) => ({ station, done: false }));
@@ -257,6 +258,7 @@ export class Room {
       q.danceUntil = q.djUntil = q.slipUntil = 0;
       q.disguise = undefined;
       q.warp = undefined;
+      q.tether = undefined;
     }
     // Meeting place: the living sit around the Nexus table, one fixed seat each (the dead leave an empty seat).
     const all = [...this.players.values()];
@@ -309,6 +311,7 @@ export class Room {
   private killPlayer(p: Player) {
     if (!p.alive) return;
     p.alive = false;
+    this.untie(p);
     p.shieldUntil = 0;
     const body: Body = { id: p.id, victim: p.id, color: p.color, look: p.look, x: Math.round(p.x), y: Math.round(p.y) };
     this.bodies.push(body);
@@ -400,6 +403,12 @@ export class Room {
       emergency: (caller) => {
         this.fx("banner", undefined, "📞 Emergency meeting!");
         this.startMeeting(caller.id, "", "emergency");
+      },
+      tie: (a, b, rope, until) => {
+        this.untie(a as Player);
+        this.untie(b as Player);
+        (a as Player).tether = { with: b.id, rope, until };
+        (b as Player).tether = { with: a.id, rope, until };
       },
       lightsOut: (until, vision) => {
         this.lightsOutUntil = until;
@@ -501,7 +510,12 @@ export class Room {
       this.fx("pop", target);
       return;
     }
+    // Cop rope: the other tied player saw it (the killer's current look, so a Shapeshifter frames someone).
+    const witness = target.tether && this.players.get(target.tether.with);
     this.killPlayer(target);
+    if (witness && witness.alive && witness !== killer) {
+      send(witness.socket, { t: "fx", kind: "witness", text: `👁️ You saw ${killer.disguise?.name ?? killer.name} kill ${target.name}!` });
+    }
     this.checkVictory();
   }
 
@@ -550,6 +564,7 @@ export class Room {
       if (this.phase === "playing") this.updateWarp(p, dt, now, moving || Math.hypot(p.vel.x, p.vel.y) > 20);
       if (p.alive && now >= p.slipUntil && this.phase === "playing") this.checkBanana(p, now);
     }
+    if (this.phase === "playing") this.updateTethers(now);
 
     const sight = this.sight;
     for (const viewer of this.players.values()) {
@@ -572,7 +587,7 @@ export class Room {
 
   // Portals: stand still on one for `portal.channel` s to warp to its pair (still sliding on ice = moving).
   private updateWarp(p: Player, dt: number, now: number, moving: boolean) {
-    const portal = !moving && now >= p.nextWarpAt ? map.portalAt(p.x, p.y, config.portal.radius) : undefined;
+    const portal = !moving && !p.tether && now >= p.nextWarpAt ? map.portalAt(p.x, p.y, config.portal.radius) : undefined;
     if (!portal) return void (p.warp = undefined);
     if (p.warp?.portal !== portal.id) p.warp = { portal: portal.id, seconds: 0 };
     p.warp.seconds += dt;
@@ -586,6 +601,37 @@ export class Room {
     ({ x: p.x, y: p.y } = exit);
     p.vel = { x: 0, y: 0 };
     if (p.alive) this.fx("warp", p);
+  }
+
+  // Cop rope: tied players can't get more than `rope` apart, each pulls the other.
+  private updateTethers(now: number) {
+    for (const p of this.players.values()) {
+      const q = p.tether && this.players.get(p.tether.with);
+      if (!p.tether) continue;
+      if (!q || !p.alive || !q.alive || now >= p.tether.until) {
+        this.untie(p);
+        continue;
+      }
+      if (p.id > q.id) continue; // once per pair
+      const d = Math.hypot(q.x - p.x, q.y - p.y);
+      // Teleported or swapped far apart: the rope snaps.
+      if (d > p.tether.rope * 3) {
+        this.untie(p);
+        continue;
+      }
+      if (d <= p.tether.rope) continue;
+      const pull = (d - p.tether.rope) / 2 / d;
+      const dx = (q.x - p.x) * pull;
+      const dy = (q.y - p.y) * pull;
+      ({ x: p.x, y: p.y } = map.collide(p.x + dx, p.y + dy, config.player.radius));
+      ({ x: q.x, y: q.y } = map.collide(q.x - dx, q.y - dy, config.player.radius));
+    }
+  }
+
+  private untie(p: Player) {
+    const q = p.tether && this.players.get(p.tether.with);
+    if (q?.tether?.with === p.id) q.tether = undefined;
+    p.tether = undefined;
   }
 
   // Game clock: a round ends in a meeting, the clock running out = killers win.
