@@ -57,6 +57,9 @@
     "minInterval": 1
   },
   "reconnectGrace": 30,
+  "leave": {
+    "revealRole": false
+  },
   "time": {
     "total": 360,
     "round": 120

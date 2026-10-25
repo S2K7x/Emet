@@ -104,6 +104,53 @@ describe("Room", () => {
   });
 });
 
+describe("Leaving mid-game", () => {
+  const leave = (room: Room, r: any, p: any) => {
+    room.disconnect(p.id, p.socket);
+    p.awayUntil = Date.now() - 1; // grace over
+    r.tick();
+  };
+  const banners = (s: FakeSocket) => s.sent.filter((m) => m.t === "fx" && m.kind === "banner").map((m: any) => m.text as string);
+
+  it("the last killer leaving hands the innocents the win, without revealing the role", () => {
+    const { room, r, sockets, killer, innocents } = startedRoom(5);
+    leave(room, r, killer);
+    assert.equal(room.players.has(killer.id), false);
+    assert.equal(r.winner, "innocent");
+    assert.equal(r.bodies.length, 0, "a leaver leaves no body");
+    const seen = banners(sockets.get(innocents[0].id)!);
+    assert.deepEqual(seen, [`👋 ${killer.name} left the game`]);
+  });
+
+  it("an innocent leaving can give the killers parity", () => {
+    const { room, r, innocents } = startedRoom(4);
+    r.killPlayer(innocents[0]);
+    leave(room, r, innocents[1]);
+    assert.equal(r.winner, "killer");
+  });
+
+  it("leaving during a meeting is settled when the meeting ends", () => {
+    const { room, r, killer } = startedRoom(5);
+    r.startMeeting(killer.id, "", "emergency");
+    leave(room, r, killer);
+    assert.equal(r.phase, "meeting");
+    for (let i = 1; r.meeting && i < 10; i++) r.updateMeeting(Date.now() + i * 1e6); // fast-forward stage by stage
+    assert.equal(r.winner, "innocent");
+  });
+
+  it("no banner for leaving the lobby", () => {
+    const room = new Room("T", () => {});
+    rooms.push(room);
+    const sockets = [0, 1].map((i) => {
+      const s = fakeSocket();
+      room.add(`p${i}`, `P${i}`, undefined, s as unknown as WebSocket);
+      return s;
+    });
+    room.remove("p1");
+    assert.equal(banners(sockets[0]).length, 0);
+  });
+});
+
 describe("fx visibility (no leak)", () => {
   const fxOf = (s: FakeSocket) => s.sent.filter((m) => m.t === "fx");
 

@@ -159,6 +159,10 @@ export class Room {
     }
     if (this.host === id) this.host = this.players.keys().next().value!;
     this.meeting?.forget(id);
+    // Left mid-game: no body, no bot, just a banner (role hidden unless `leave.revealRole`).
+    if (gone && this.phase !== "lobby" && this.phase !== "ended") {
+      this.fx("banner", undefined, `👋 ${gone.name} left the game${config.leave.revealRole ? ` (${gone.role})` : ""}`);
+    }
     // Their unfinished tasks no longer block the bar.
     if (gone?.role === "innocent") this.taskTotal -= gone.tasks.filter((t) => !t.done).length;
     this.checkTaskBar();
