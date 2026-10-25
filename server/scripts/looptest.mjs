@@ -25,14 +25,23 @@ function bot(name) {
 }
 const me = (b) => b.snap.players.find((p) => p.id === b.id);
 
+// Steer like a player would: slow down near the target and brake against the slide (Ice, Moon keep you sliding).
 async function walk(b, x, y, close = 12) {
-  for (let i = 0; i < 120; i++) {
+  let last = { ...me(b) };
+  let lastAt = Date.now();
+  for (let i = 0; i < 300; i++) {
+    await sleep(50);
     const p = me(b);
+    const now = Date.now();
+    const dt = Math.max(0.001, (now - lastAt) / 1000);
+    const vx = (p.x - last.x) / dt;
+    const vy = (p.y - last.y) / dt;
+    last = { ...p };
+    lastAt = now;
     const dx = x - p.x;
     const dy = y - p.y;
-    if (Math.hypot(dx, dy) < close) break;
-    b.send({ t: "input", dx, dy });
-    await sleep(50);
+    if (Math.hypot(dx, dy) < close && Math.hypot(vx, vy) < 20) break;
+    b.send({ t: "input", dx: dx / 120 - vx / 300, dy: dy / 120 - vy / 300 });
   }
   b.send({ t: "input", dx: 0, dy: 0 });
   await sleep(150);

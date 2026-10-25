@@ -1,55 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { WebSocket } from "ws";
-import type { BodyView, ChatLine, ItemView, Look, MeetingKind, Phase, PlayerView, Role, ServerMsg, Status, Winner, YouView } from "../../shared/protocol.ts";
+import type { ChatLine, MeetingKind, Phase, ServerMsg, Winner } from "../../shared/protocol.ts";
 import config from "../../data/game.json" with { type: "json" };
 import quickchat from "../../data/quickchat.json" with { type: "json" };
-import mapData from "../../data/map.json" with { type: "json" };
-import skins from "../../data/skins.json" with { type: "json" };
 import minigames from "../../data/minigames.json" with { type: "json" };
-import { MapGeometry, type MapData } from "../../shared/map.ts";
 import { Meeting } from "./meeting.ts";
+import { isMoving, map, move } from "./movement.ts";
+import { cleanLook, killersFor, send, shuffle, type Body, type Item, type Player } from "./player.ts";
+import { canSee, youFor, viewFor, type Sight } from "./visibility.ts";
 import { assignment, handlers, pool, roleDefs, type PowerWorld } from "./powers.ts";
 
-const map = new MapGeometry(mapData as MapData);
-
-interface Player {
-  id: string;
-  name: string;
-  color: string;
-  look: Look;
-  x: number;
-  y: number;
-  input: { dx: number; dy: number };
-  vel: { x: number; y: number }; // px/s, for zones with inertia (Moon, Ice)
-  socket: WebSocket;
-  token: string;
-  awayUntil?: number; // disconnected: removed from the game after this timestamp
-  role: Role;
-  roleId?: string; // special role (data/powers.json)
-  alive: boolean;
-  ejected: boolean; // voted out: can never be revived
-  nextKillAt: number; // timestamp ms
-  nextChatAt: number;
-  nextPowerAt: number;
-  uses: number; // -1 = unlimited
-  // Power effects (timestamps ms)
-  danceUntil: number;
-  djUntil: number;
-  shieldUntil: number;
-  slipUntil: number;
-  slipDir: { dx: number; dy: number };
-  disguise?: { name: string; color: string; look: Look; until: number };
-  eaten: number;
-  // Game loop
-  offer?: string[]; // roles to pick from at game start
-  tasks: { station: string; done: boolean }[];
-  working?: { station: string; seconds: number };
-  ghostTasks: number; // tasks done as a ghost: weights revival
-  emergencies: number;
-}
-
-type Body = BodyView & { fake?: boolean };
-type Item = ItemView & { owner: string; armedAt: number };
 
 export class Room {
   readonly players = new Map<string, Player>();
@@ -561,7 +521,6 @@ export class Room {
     if (this.players.size === 0) return;
     const dt = (now - this.lastTick) / 1000;
     this.lastTick = now;
-    const { speed, radius } = config.player;
 
     if (this.phase === "meeting") this.updateMeeting(now);
     if (this.phase === "playing") this.updateClock(dt);
@@ -578,35 +537,22 @@ export class Room {
         this.updateWork(p, dt, false); // DJ: dancing on the spot (tasks still progress)
         continue;
       }
-      const slipping = p.alive && now < p.slipUntil;
-      const dir = slipping ? p.slipDir : p.input;
-      this.updateWork(p, dt, slipping || Math.hypot(dir.dx, dir.dy) > 0.05);
-      // Zone rule: speed multiplier, and inertia (velocity eases toward the input) on Moon/Ice.
-      const rule = map.ruleAt(p.x, p.y);
-      const v = speed * (rule?.speed ?? 1) * (slipping ? (roleDefs.get("prankster")?.params.slipSpeed ?? 1.8) : 1);
-      const target = { x: dir.dx * v, y: dir.dy * v };
-      if (slipping || !rule?.friction) p.vel = target;
-      else {
-        const k = Math.min(1, rule.friction * dt);
-        p.vel = { x: p.vel.x + (target.x - p.vel.x) * k, y: p.vel.y + (target.y - p.vel.y) * k };
-      }
-      const before = { x: p.x, y: p.y };
-      ({ x: p.x, y: p.y } = map.collide(p.x + p.vel.x * dt, p.y + p.vel.y * dt, radius));
-      // Walls absorb the momentum (no sliding forever into a wall).
-      if (dt > 0) p.vel = { x: (p.x - before.x) / dt, y: (p.y - before.y) / dt };
-      if (p.alive && !slipping && this.phase === "playing") this.checkBanana(p, now);
+      this.updateWork(p, dt, isMoving(p, now));
+      move(p, dt, now);
+      if (p.alive && now >= p.slipUntil && this.phase === "playing") this.checkBanana(p, now);
     }
 
+    const sight = this.sight;
     for (const viewer of this.players.values()) {
       send(viewer.socket, {
         t: "snapshot",
         time: now,
         phase: this.phase,
         host: this.host,
-        you: this.youFor(viewer, now),
-        players: this.viewFor(viewer, now),
-        bodies: this.phase === "lobby" ? [] : this.bodies.filter((b) => this.canSee(viewer, b, now)).map(({ fake: _, ...b }) => b),
-        items: this.items.filter((it) => this.canSee(viewer, it, now)).map(({ owner: _o, armedAt: _a, ...it }) => it),
+        you: youFor(sight, viewer, now),
+        players: viewFor(sight, viewer, now),
+        bodies: this.phase === "lobby" ? [] : this.bodies.filter((b) => canSee(sight, viewer, b, now)).map(({ fake: _, ...b }) => b),
+        items: this.items.filter((it) => canSee(sight, viewer, it, now)).map(({ owner: _o, armedAt: _a, ...it }) => it),
         meeting: this.meeting?.viewFor(viewer.id, now, (id) => this.players.get(id)?.role),
         clock: this.phase === "playing" || this.phase === "meeting" ? this.clock() : undefined,
         taskBar: this.phase === "lobby" || this.taskTotal <= 0 ? undefined : Math.min(1, this.taskDone / this.taskTotal),
@@ -645,105 +591,12 @@ export class Room {
     this.fx("slip", p);
   }
 
-  // Lights out, or standing in a dark zone: innocents and neutrals only see what's close to them.
-  private visionOf(viewer: Player, now: number): number | undefined {
-    if (this.phase !== "playing" || !viewer.alive || viewer.role === "killer") return undefined;
-    const radii = [now < this.lightsOutUntil ? this.vision : Infinity, map.ruleAt(viewer.x, viewer.y)?.vision ?? Infinity];
-    const r = Math.min(...radii);
-    return r === Infinity ? undefined : r;
+  // What the visibility rules need (visibility.ts).
+  private get sight(): Sight {
+    return { phase: this.phase, players: this.players, lightsOutUntil: this.lightsOutUntil, vision: this.vision, choiceUntil: this.choiceUntil };
   }
 
   private canSee(viewer: Player, at: { x: number; y: number }, now: number) {
-    const r = this.visionOf(viewer, now);
-    return r === undefined || Math.hypot(at.x - viewer.x, at.y - viewer.y) <= r;
+    return canSee(this.sight, viewer, at, now);
   }
-
-  private youFor(p: Player, now: number): YouView {
-    if (this.phase === "lobby") return { alive: true };
-    const def = p.roleId ? roleDefs.get(p.roleId) : undefined;
-    return {
-      role: p.role,
-      alive: p.alive,
-      killCooldown: p.role === "killer" ? Math.max(0, Math.ceil((p.nextKillAt - now) / 1000)) : undefined,
-      power: def && {
-        id: def.id,
-        cooldown: Math.max(0, Math.ceil((p.nextPowerAt - now) / 1000)),
-        uses: p.uses >= 0 ? p.uses : undefined,
-        progress: def.id === "vulture" ? `${p.eaten}/${def.params.goal}` : undefined,
-      },
-      blind: this.visionOf(p, now),
-      tasks: p.tasks,
-      working: p.working && { station: p.working.station, ready: p.working.seconds >= minigames.minSeconds },
-      emergencies: p.emergencies,
-      offer: p.offer && now < this.choiceUntil ? p.offer : undefined,
-      offerLeft: p.offer && now < this.choiceUntil ? Math.ceil((this.choiceUntil - now) / 1000) : undefined,
-    };
-  }
-
-  private statusOf(p: Player, now: number): Status[] | undefined {
-    if (!p.alive) return undefined;
-    const s: Status[] = [];
-    if (now < p.danceUntil) s.push("dance");
-    if (now < p.djUntil) s.push("dj");
-    if (now < p.shieldUntil) s.push("shield");
-    if (now < p.slipUntil) s.push("slip");
-    return s.length ? s : undefined;
-  }
-
-  // Snapshot built per player: it only contains what they're allowed to know.
-  private viewFor(viewer: Player, now: number): PlayerView[] {
-    const views: PlayerView[] = [];
-    for (const p of this.players.values()) {
-      // Ghosts are only visible to other ghosts (and to everyone at game end).
-      if (!p.alive && viewer.alive && (this.phase === "playing" || this.phase === "meeting")) continue;
-      if (p !== viewer && !this.canSee(viewer, p, now)) continue;
-      // Shapeshifter: everyone sees the borrowed look, except the killer team.
-      const d = p.disguise && p !== viewer && this.roleVisibleTo(viewer, p) !== "killer" ? p.disguise : p;
-      views.push({
-        id: p.id,
-        name: d.name,
-        color: d.color,
-        look: d.look,
-        x: Math.round(p.x),
-        y: Math.round(p.y),
-        alive: p.alive,
-        away: p.awayUntil ? true : undefined,
-        role: this.roleVisibleTo(viewer, p),
-        status: this.statusOf(p, now),
-        roleId: this.phase === "ended" || p === viewer ? p.roleId : undefined,
-      });
-    }
-    return views;
-  }
-
-  private roleVisibleTo(viewer: Player, p: Player): Role | undefined {
-    if (this.phase === "lobby") return undefined;
-    if (this.phase === "ended" || viewer.id === p.id) return p.role;
-    if (config.killers.knowEachOther && viewer.role === "killer" && p.role === "killer") return "killer";
-    return undefined;
-  }
-}
-
-export function send(socket: WebSocket, msg: ServerMsg) {
-  if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg));
-}
-
-function killersFor(count: number) {
-  const table = config.killers.byPlayers as Record<string, number>;
-  return table[String(count)] ?? Math.max(1, Math.floor(count / 4));
-}
-
-function shuffle<T>(arr: T[]) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-// The client's choice is untrusted: an unknown id falls back to the default skin.
-function cleanLook(raw: unknown): Look {
-  const l = (raw ?? {}) as Partial<Record<keyof Look, unknown>>;
-  const skin = skins.skins.some((s) => s.id === l.skin) ? String(l.skin) : skins.default;
-  return { skin };
 }

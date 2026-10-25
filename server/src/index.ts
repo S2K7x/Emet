@@ -5,7 +5,8 @@ import { extname, join, normalize, resolve } from "node:path";
 import { WebSocketServer } from "ws";
 import type { ClientMsg } from "../../shared/protocol.ts";
 import config from "../../data/game.json" with { type: "json" };
-import { Room, send } from "./room.ts";
+import { Room } from "./room.ts";
+import { send } from "./player.ts";
 
 const PORT = Number(process.env.PORT ?? 2567);
 const rooms = new Map<string, Room>();

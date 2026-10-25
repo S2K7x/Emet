@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import type { BodyView, ItemView, Look, PlayerView, ServerMsg } from "../../shared/protocol.ts";
 import type { Net } from "./net.ts";
 import { MeetingUi } from "./MeetingUi.ts";
-import { avatarSvg, TEXTURE_BOX, textureSvg } from "./avatar.ts";
+import { TEXTURE_BOX, textureSvg } from "./avatar.ts";
 import roles from "../../data/roles.json";
 import mapData from "../../data/map.json";
 import { MapGeometry, type MapData } from "../../shared/map.ts";
@@ -10,6 +10,7 @@ import { drawMap } from "./MapView.ts";
 import { Minimap } from "./Minimap.ts";
 import { MiniGame } from "./MiniGames.ts";
 import { GhostChat } from "./GhostChat.ts";
+import { RevealCard } from "./RevealCard.ts";
 import config from "../../data/game.json";
 import powers from "../../data/powers.json";
 
@@ -52,7 +53,6 @@ export class GameScene extends Phaser.Scene {
   private corpses = new Map<string, Phaser.GameObjects.GameObject[]>();
   private items = new Map<string, Phaser.GameObjects.Text>();
   private stationMarks = new Map<string, Phaser.GameObjects.Text>(); // "!" over my unfinished stations
-  private pickedKey = "";
   private miniGame = new MiniGame(
     () => this.syncMiniGame(), // won: tell the server as soon as it can accept
     () => this.net.send({ t: "taskCancel" }),
@@ -65,14 +65,15 @@ export class GameScene extends Phaser.Scene {
   private lastSent = { dx: 0, dy: 0 };
   private meetingUi: MeetingUi;
   private ghostChat: GhostChat;
+  private revealCard: RevealCard;
   private lastPhase?: string;
-  private revealed = ""; // last role shown full screen
   private minimap = new Minimap(map.data);
 
   constructor(private net: Net, private joined: Joined) {
     super("game");
     this.meetingUi = new MeetingUi(net, joined.you);
     this.ghostChat = new GhostChat(net);
+    this.revealCard = new RevealCard(net, joined.you, joined.code);
   }
 
   create() {
@@ -99,7 +100,6 @@ export class GameScene extends Phaser.Scene {
     $("start").onclick = () => this.net.send({ t: "start" });
     $("kill").onclick = () => this.net.send({ t: "kill" });
     $("report").onclick = () => this.net.send({ t: "report" });
-    $("rv-go").onclick = () => ($("reveal").style.display = "none");
     this.input.keyboard!.on("keydown-R", () => this.net.send({ t: "report" }));
     this.input.keyboard!.on("keydown-M", () => this.minimap.toggle());
     this.minimap.show(config.minimap.enabled);
@@ -476,7 +476,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       role.style.display = "none";
     }
-    this.updateReveal(s);
+    this.revealCard.update(s);
 
     const kill = $("kill") as HTMLButtonElement;
     const canKill = s.phase === "playing" && s.you.role === "killer" && s.you.alive;
@@ -551,63 +551,6 @@ export class GameScene extends Phaser.Scene {
       const small = document.createElement("small");
       small.textContent = cast;
       end.appendChild(small);
-    }
-  }
-
-  // Full-screen card for each new role (game start, death → ghost).
-  private updateReveal(s: Snapshot) {
-    const reveal = $("reveal");
-    if (s.phase !== "playing" || !s.you.role) {
-      if (s.phase !== "meeting") this.revealed = "";
-      reveal.style.display = "none";
-      return;
-    }
-    this.updatePick(s);
-    const key = s.you.alive ? `${s.you.role}:${s.you.power?.id ?? ""}` : "ghost";
-    if (key === this.revealed) return;
-    this.revealed = key;
-
-    const team = s.you.alive ? s.you.role : "ghost";
-    const r = roles[team];
-    const info = team === "ghost" ? undefined : roleInfo(s.you.power?.id);
-    const me = s.players.find((p) => p.id === this.joined.you);
-    reveal.style.setProperty("--hero", r.color);
-    reveal.style.color = team === "innocent" ? "#141118" : "#ffffff";
-    $("rv-name").textContent = info ? info.name : r.name;
-    $("rv-tagline").textContent = info ? `${r.name} · ${info.power}` : r.tagline;
-    $("rv-icon").innerHTML = `${info?.icon ?? r.icon}<b>${s.players.filter((p) => p.alive).length}</b>alive`;
-    $("rv-char").innerHTML = avatarSvg(me?.color ?? "#ffffff", { sticker: true, ghost: team === "ghost", look: me?.look });
-    $("rv-stat-label").textContent = "Room";
-    $("rv-stat").textContent = this.joined.code;
-    reveal.style.display = "flex";
-    const hide = () => {
-      if (this.revealed !== key) return;
-      if (this.latest?.you.offer) return void setTimeout(hide, 1000); // still choosing
-      reveal.style.display = "none";
-    };
-    setTimeout(hide, 5000);
-  }
-
-  // Role choice on the reveal card: tap one of the offered roles.
-  private updatePick(s: Snapshot) {
-    const box = $("rv-pick");
-    const offer = s.you.alive ? s.you.offer : undefined;
-    box.style.display = offer ? "flex" : "none";
-    $("rv-pick-label").style.display = offer ? "block" : "none";
-    if (!offer) return;
-    $("rv-pick-label").textContent = `Pick your power · ${s.you.offerLeft}s`;
-    const key = JSON.stringify([offer, s.you.power?.id]);
-    if (key === this.pickedKey) return;
-    this.pickedKey = key;
-    box.innerHTML = "";
-    for (const id of offer) {
-      const info = roleInfo(id);
-      if (!info) continue;
-      const btn = document.createElement("button");
-      btn.className = id === s.you.power?.id ? "on" : "";
-      btn.innerHTML = `<b>${info.icon} ${info.name}</b><small>${info.power}</small>`;
-      btn.onclick = () => this.net.send({ t: "pick", role: id });
-      box.appendChild(btn);
     }
   }
 
